@@ -80,6 +80,10 @@ const Upload = () => {
 
             const data = await response.json();
 
+            // Persist results for navigation/refresh safety
+            localStorage.setItem('latestResults', JSON.stringify(data));
+            localStorage.setItem('latestBranch', branch);
+
             // Pass the raw API response to the Results page via navigation state
             navigate('/results', { state: { results: data, branch } });
         } catch (err) {

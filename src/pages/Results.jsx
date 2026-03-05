@@ -12,7 +12,13 @@ const getRelevanceInfo = (pct) => {
 
 const Results = () => {
     const location = useLocation();
-    const { results, branch } = location.state || {};
+
+    // Primary: useLocation state, Secondary: localStorage fallback
+    const stateResults = location.state?.results;
+    const stateBranch = location.state?.branch;
+
+    const results = stateResults || JSON.parse(localStorage.getItem('latestResults') || 'null');
+    const branch = stateBranch || localStorage.getItem('latestBranch') || '';
 
     // ---- Download plan (client-side, no extra API call needed) ----
     const handleDownloadPlan = () => {
