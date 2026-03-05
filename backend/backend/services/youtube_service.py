@@ -14,36 +14,36 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 SAMPLE_VIDEOS = {
     "operating systems": [
         {
-            "id": "dQw4w9WgXcQ",
-            "title": "Operating Systems Complete Tutorial",
-            "channel": "ExamBridge AI",
-            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-            "duration": "PT3M32S",
-            "views": 1500000,
-            "likes": 75000
+            "id": "2i2N_Qo2B1U",
+            "title": "Operating Systems: Crash Course Computer Science #18",
+            "channel": "CrashCourse",
+            "url": "https://www.youtube.com/watch?v=2i2N_Qo2B1U",
+            "thumbnail": "https://img.youtube.com/vi/2i2N_Qo2B1U/hqdefault.jpg",
+            "duration": "PT10M42S",
+            "views": 2500000,
+            "likes": 50000
         },
         {
-            "id": "kJQP7kiw5Fk",
-            "title": "OS Concepts Explained",
-            "channel": "Tech Tutorials",
-            "url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
-            "thumbnail": "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
-            "duration": "PT4M42S",
-            "views": 8000000,
-            "likes": 400000
+            "id": "26QPDBe-NB8",
+            "title": "Introduction to Operating Systems",
+            "channel": "MIT OpenCourseWare",
+            "url": "https://www.youtube.com/watch?v=26QPDBe-NB8",
+            "thumbnail": "https://img.youtube.com/vi/26QPDBe-NB8/hqdefault.jpg",
+            "duration": "PT49M23S",
+            "views": 150000,
+            "likes": 2000
         }
     ],
     "networks": [
         {
-            "id": "sBws8MSXN7A",
-            "title": "Computer Networks Basics",
-            "channel": "Network Academy",
-            "url": "https://www.youtube.com/watch?v=sBws8MSXN7A",
-            "thumbnail": "https://img.youtube.com/vi/sBws8MSXN7A/hqdefault.jpg",
-            "duration": "PT10M15S",
-            "views": 250000,
-            "likes": 12000
+            "id": "3QhU9jd03a0",
+            "title": "Computer Networks: Crash Course Computer Science #28",
+            "channel": "CrashCourse",
+            "url": "https://www.youtube.com/watch?v=3QhU9jd03a0",
+            "thumbnail": "https://img.youtube.com/vi/3QhU9jd03a0/hqdefault.jpg",
+            "duration": "PT12M29S",
+            "views": 1800000,
+            "likes": 35000
         }
     ]
 }
@@ -192,35 +192,35 @@ def fetch_youtube_videos(query: str, max_results: int = 5):
         {
             "title": f"Learn {query} - Complete Tutorial",
             "channel": "ExamBridge AI",
-            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # Rickroll for testing
-            "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-            "duration": "3:32",
+            "url": "https://www.youtube.com/watch?v=2i2N_Qo2B1U",  # Operating Systems Crash Course
+            "thumbnail": "https://img.youtube.com/vi/2i2N_Qo2B1U/hqdefault.jpg",
+            "duration": "10:42",
             "tubematix_score": 85.0,
-            "views": 1500000,
-            "likes": 75000,
-            "id": "dQw4w9WgXcQ"
+            "views": 2500000,
+            "likes": 50000,
+            "id": "2i2N_Qo2B1U"
         },
         {
-            "title": f"{query} Fundamentals - GATE Preparation",
-            "channel": "GATE Academy",
-            "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",  # Me at the zoo
-            "thumbnail": "https://img.youtube.com/vi/jNQXAC9IVRw/hqdefault.jpg",
-            "duration": "0:18",
+            "title": f"{query} Fundamentals - Educational Video",
+            "channel": "Educational Channel",
+            "url": "https://www.youtube.com/watch?v=3QhU9jd03a0",  # Computer Networks Crash Course
+            "thumbnail": "https://img.youtube.com/vi/3QhU9jd03a0/hqdefault.jpg",
+            "duration": "12:29",
             "tubematix_score": 78.5,
-            "views": 100000,
-            "likes": 5000,
-            "id": "jNQXAC9IVRw"
+            "views": 1800000,
+            "likes": 35000,
+            "id": "3QhU9jd03a0"
         },
         {
             "title": f"Advanced {query} Concepts",
             "channel": "Tech Tutorials",
-            "url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",  # Despacito
-            "thumbnail": "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
-            "duration": "4:42",
+            "url": "https://www.youtube.com/watch?v=26QPDBe-NB8",  # MIT OS Intro
+            "thumbnail": "https://img.youtube.com/vi/26QPDBe-NB8/hqdefault.jpg",
+            "duration": "49:23",
             "tubematix_score": 72.3,
-            "views": 8000000,
-            "likes": 400000,
-            "id": "kJQP7kiw5Fk"
+            "views": 150000,
+            "likes": 2000,
+            "id": "26QPDBe-NB8"
         }
     ]
 
@@ -230,7 +230,7 @@ def fetch_youtube_videos(query: str, max_results: int = 5):
 
     try:
         # 1. Primary Search - Professional Lectures
-        search_query = f"{query} lecture gate"
+        search_query = f"{query} lecture"
         logger.info(f"Primary search: {search_query}")
         search = youtube.search().list(
             q=search_query,
@@ -301,35 +301,35 @@ def fetch_and_rank_videos_by_topic(topic: str, max_results: int = 10, top_n: int
         {
             "title": f"Learn {topic} - Complete Tutorial",
             "channel": "ExamBridge AI",
-            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-            "duration": "PT3M32S",
-            "views": 1500000,
-            "likes": 75000,
+            "url": "https://www.youtube.com/watch?v=2i2N_Qo2B1U",
+            "thumbnail": "https://img.youtube.com/vi/2i2N_Qo2B1U/hqdefault.jpg",
+            "duration": "PT10M42S",
+            "views": 2500000,
+            "likes": 50000,
             "tubematix_score": 85.0,
-            "id": "dQw4w9WgXcQ"
+            "id": "2i2N_Qo2B1U"
         },
         {
-            "title": f"{topic} Fundamentals - GATE Preparation",
-            "channel": "GATE Academy",
-            "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-            "thumbnail": "https://img.youtube.com/vi/jNQXAC9IVRw/hqdefault.jpg",
-            "duration": "PT0M18S",
-            "views": 100000,
-            "likes": 5000,
+            "title": f"{topic} Fundamentals - Educational Video",
+            "channel": "Educational Channel",
+            "url": "https://www.youtube.com/watch?v=3QhU9jd03a0",
+            "thumbnail": "https://img.youtube.com/vi/3QhU9jd03a0/hqdefault.jpg",
+            "duration": "PT12M29S",
+            "views": 1800000,
+            "likes": 35000,
             "tubematix_score": 78.5,
-            "id": "jNQXAC9IVRw"
+            "id": "3QhU9jd03a0"
         },
         {
             "title": f"Advanced {topic} Concepts",
             "channel": "Tech Tutorials",
-            "url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
-            "thumbnail": "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
-            "duration": "PT4M42S",
-            "views": 8000000,
-            "likes": 400000,
+            "url": "https://www.youtube.com/watch?v=26QPDBe-NB8",
+            "thumbnail": "https://img.youtube.com/vi/26QPDBe-NB8/hqdefault.jpg",
+            "duration": "PT49M23S",
+            "views": 150000,
+            "likes": 2000,
             "tubematix_score": 72.3,
-            "id": "kJQP7kiw5Fk"
+            "id": "26QPDBe-NB8"
         }
     ]
     
@@ -339,7 +339,7 @@ def fetch_and_rank_videos_by_topic(topic: str, max_results: int = 10, top_n: int
     
     try:
         # Search for videos
-        search_query = f"{topic} educational gate exam"
+        search_query = f"{topic} educational tutorial"
         logger.info(f"Searching for: {search_query}")
         
         search_request = youtube.search().list(
