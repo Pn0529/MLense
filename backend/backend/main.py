@@ -8,6 +8,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime
+from functools import lru_cache
+import time
 
 from backend.services.nlp_service import extract_text_from_pdf, extract_topics, compute_overall_similarity, topic_wise_similarity_ranking, get_model, get_util
 from backend.services.youtube_service import fetch_youtube_videos, get_video_summary
@@ -27,6 +29,10 @@ app = FastAPI(title="ExamBridge AI API")
 
 # Persistent storage for Topic of the Day
 current_topic_of_the_day = None
+
+# Response cache for faster API mapping (in-memory, 10-minute TTL)
+_resource_cache = {}
+CACHE_TTL = 600  # 10 minutes
 
 
 # -------------------------------
@@ -305,6 +311,7 @@ async def get_resources_for_topic(topic: str):
     """
     Returns ranked YouTube videos for a given topic using TubeMatix scoring.
     Returns top 3 videos ranked by educational relevance.
+    Responses are cached for 10 minutes to optimize API performance.
     
     Args:
         topic: str, the learning topic to fetch videos for
@@ -312,6 +319,13 @@ async def get_resources_for_topic(topic: str):
     Returns:
         dict with topic and list of ranked videos with TubeMatix scores
     """
+    # Check cache first
+    if topic in _resource_cache:
+        cached_data, timestamp = _resource_cache[topic]
+        if time.time() - timestamp < CACHE_TTL:
+            logger.info(f"Returning cached resources for topic: {topic}")
+            return cached_data
+    
     logger.info(f"Fetching TubeMatix-ranked resources for topic: {topic}")
     
     try:
@@ -334,13 +348,17 @@ async def get_resources_for_topic(topic: str):
                 "tubematix_score": round(v.get("tubematix_score", 0), 2)
             })
         
-        logger.info(f"Returning {len(formatted_videos)} ranked videos for '{topic}'")
-        
-        return {
+        response_data = {
             "topic": topic,
             "videos": formatted_videos,
             "total": len(formatted_videos)
         }
+        
+        # Cache the response
+        _resource_cache[topic] = (response_data, time.time())
+        logger.info(f"Cached and returning {len(formatted_videos)} ranked videos for '{topic}'")
+        
+        return response_data
         
     except Exception as e:
         logger.error(f"Error fetching resources for topic '{topic}': {e}")

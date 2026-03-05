@@ -400,7 +400,7 @@ const Resources = () => {
                                     </div>
                                 )}
 
-                                {/* PYQ Section */}
+                                {/* Action Buttons Section */}
                                 <div style={{
                                     background: 'linear-gradient(135deg, #9b59b6, #8e44ad)',
                                     color: '#fff',
@@ -408,48 +408,101 @@ const Resources = () => {
                                     borderRadius: '0 0 12px 12px',
                                     marginTop: '-1px'
                                 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                                        <div>
-                                            <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <i className="fa-solid fa-play-circle"></i>
-                                                Watch Top-Ranked Video
-                                            </h4>
-                                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#e8daef' }}>
-                                                Jump straight to the highest TubeMatix-scored lecture
-                                            </p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                        {/* Watch Top Video */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                                            <div>
+                                                <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <i className="fa-solid fa-play-circle"></i>
+                                                    Watch Top-Ranked Video
+                                                </h4>
+                                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#e8daef' }}>
+                                                    Jump straight to the highest TubeMatix-scored lecture
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    const topVideo = videos[0];
+                                                    if (topVideo && topVideo.url) {
+                                                        window.open(topVideo.url, '_blank', 'noopener,noreferrer');
+                                                    } else {
+                                                        alert('Video is still loading. Please wait a moment and try again.');
+                                                    }
+                                                }}
+                                                disabled={videos.length === 0}
+                                                style={{
+                                                    background: videos.length === 0 ? '#ccc' : '#fff',
+                                                    color: videos.length === 0 ? '#666' : '#9b59b6',
+                                                    fontWeight: 700,
+                                                    border: 'none',
+                                                    padding: '0.7rem 1.5rem',
+                                                    borderRadius: '6px',
+                                                    cursor: videos.length === 0 ? 'not-allowed' : 'pointer',
+                                                    fontSize: '0.95rem',
+                                                    boxShadow: videos.length === 0 ? 'none' : '0 4px 12px rgba(0,0,0,0.2)',
+                                                    transition: 'all 0.2s',
+                                                    whiteSpace: 'nowrap'
+                                                }}
+                                                onMouseOver={(e) => {
+                                                    if (videos.length > 0) {
+                                                        e.currentTarget.style.transform = 'scale(1.05)';
+                                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
+                                                    }
+                                                }}
+                                                onMouseOut={(e) => {
+                                                    if (videos.length > 0) {
+                                                        e.currentTarget.style.transform = 'scale(1)';
+                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                                                    }
+                                                }}
+                                            >
+                                                <i className="fa-brands fa-youtube" style={{ marginRight: '6px' }}></i>
+                                                {videos.length === 0 ? 'Loading...' : 'Watch Now'}
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => {
-                                                const topVideo = videos[0];
-                                                if (topVideo) {
-                                                    window.open(topVideo.url, '_blank', 'noopener,noreferrer');
-                                                }
-                                            }}
-                                            style={{
-                                                background: '#fff',
-                                                color: '#9b59b6',
-                                                fontWeight: 700,
-                                                border: 'none',
-                                                padding: '0.7rem 1.5rem',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.95rem',
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                                                transition: 'all 0.2s',
-                                                whiteSpace: 'nowrap'
-                                            }}
-                                            onMouseOver={(e) => {
-                                                e.currentTarget.style.transform = 'scale(1.05)';
-                                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
-                                            }}
-                                            onMouseOut={(e) => {
-                                                e.currentTarget.style.transform = 'scale(1)';
-                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-                                            }}
-                                        >
-                                            <i className="fa-brands fa-youtube" style={{ marginRight: '6px' }}></i>
-                                            Watch Now
-                                        </button>
+
+                                        {/* Divider */}
+                                        <div style={{ height: '1px', background: 'rgba(255,255,255,0.3)', margin: '0.5rem 0' }}></div>
+
+                                        {/* PYQ Quiz */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                                            <div>
+                                                <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <i className="fa-solid fa-file-circle-question"></i>
+                                                    Practice with PYQs
+                                                </h4>
+                                                <p style={{ margin: 0, fontSize: '0.9rem', color: '#e8daef' }}>
+                                                    Test your knowledge with GATE exam questions
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => navigate('/pyqs', { state: { topic } })}
+                                                style={{
+                                                    background: '#fff',
+                                                    color: '#9b59b6',
+                                                    fontWeight: 700,
+                                                    border: 'none',
+                                                    padding: '0.7rem 1.5rem',
+                                                    borderRadius: '6px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.95rem',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                                                    transition: 'all 0.2s',
+                                                    whiteSpace: 'nowrap'
+                                                }}
+                                                onMouseOver={(e) => {
+                                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
+                                                }}
+                                                onMouseOut={(e) => {
+                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                                                }}
+                                            >
+                                                <i className="fa-solid fa-play" style={{ marginRight: '6px' }}></i>
+                                                Start Quiz
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
