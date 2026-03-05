@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
 import Results from './pages/Results';
 import Resources from './pages/Resources';
+import PYQs from './pages/PYQs';
 
 function App() {
     return (
@@ -20,6 +21,7 @@ function App() {
                     <Route path="/upload" element={<Upload />} />
                     <Route path="/results" element={<Results />} />
                     <Route path="/resources" element={<Resources />} />
+                    <Route path="/pyqs" element={<PYQs />} />
                 </Routes>
             </main>
         </Router>

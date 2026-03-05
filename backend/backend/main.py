@@ -13,6 +13,7 @@ from backend.services.nlp_service import extract_text_from_pdf, extract_topics, 
 from backend.services.youtube_service import fetch_youtube_videos, get_video_summary
 from backend.utils.auth_utils import get_current_user
 from backend.utils.database import analyses_collection
+from backend.data.pyqs import get_pyqs_by_topic, get_all_categories
 import uvicorn
 import logging
 
@@ -298,6 +299,18 @@ async def get_tod():
         "Explanation": explanation,
         "Best Video": best_video
     }
+
+# ─── PYQ (Previous Year Questions) Endpoints ───
+@app.get("/pyqs/categories")
+def pyq_categories():
+    """Return all available PYQ categories."""
+    return {"categories": get_all_categories()}
+
+@app.get("/pyqs/{topic}")
+def pyq_by_topic(topic: str):
+    """Return PYQs matching or related to the given topic."""
+    results = get_pyqs_by_topic(topic)
+    return {"topic": topic, "results": results}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))

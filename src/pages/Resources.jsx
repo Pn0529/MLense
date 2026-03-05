@@ -186,9 +186,13 @@ const Resources = () => {
                                 >
                                     <i className="fa-solid fa-file-pdf" style={{ color: 'var(--primary-navy)', fontSize: '1.2rem' }}></i> Download Notes
                                 </button>
-                                <a href={res.pyqs} className="resource-link">
+                                <button
+                                    onClick={() => navigate('/pyqs', { state: { topic: res.topic } })}
+                                    className="resource-link"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                                >
                                     <i className="fa-solid fa-file-circle-question" style={{ color: 'var(--primary-green)', fontSize: '1.2rem' }}></i> View PYQs
-                                </a>
+                                </button>
                             </div>
                             <button className="btn btn-done" onClick={() => handleDone(res.topic)}
                                 style={{ width: '100%', marginTop: 'auto' }}>I am Done</button>
