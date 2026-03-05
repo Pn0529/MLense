@@ -9,10 +9,13 @@ logger = logging.getLogger(__name__)
 
 # Lazy load heavy modules to prevent startup issues
 _model = None
+_util = None
+_model_loading = False
 
 def get_model():
-    global _model
-    if _model is None:
+    global _model, _model_loading
+    if _model is None and not _model_loading:
+        _model_loading = True
         try:
             from sentence_transformers import SentenceTransformer
             logger.info("Loading SentenceTransformer model 'all-MiniLM-L6-v2'...")
@@ -20,29 +23,93 @@ def get_model():
             logger.info("Model loaded successfully.")
         except Exception as e:
             logger.error(f"Failed to load model: {e}")
+            _model_loading = False
             raise RuntimeError(f"Model loading failed: {e}")
+        finally:
+            _model_loading = False
+    elif _model_loading:
+        # Wait for model to finish loading if another thread is loading it
+        import time
+        while _model_loading:
+            time.sleep(0.1)
     return _model
 
 def get_util():
+    global _util
+    if _util is None:
+        try:
+            from sentence_transformers import util
+            _util = util
+            logger.info("Sentence transformers utility loaded successfully.")
+        except Exception as e:
+            logger.error(f"Failed to load sentence_transformers.util: {e}")
+            raise RuntimeError(f"Utility loading failed: {e}")
+    return _util
+
+# Preload model at startup
+def preload_models():
+    """Preload models to reduce first request latency"""
     try:
-        from sentence_transformers import util
-        return util
+        logger.info("Preloading NLP models...")
+        get_model()
+        get_util()
+        logger.info("NLP models preloaded successfully.")
     except Exception as e:
-        logger.error(f"Failed to load sentence_transformers.util: {e}")
-        raise RuntimeError(f"Utility loading failed: {e}")
+        logger.warning(f"Model preloading failed: {e}. Will load on first request.")
 
 def extract_text_from_pdf(contents: bytes) -> str:
     text = ""
     try:
         with pdfplumber.open(io.BytesIO(contents)) as pdf:
-            for page in pdf.pages:
-                extracted = page.extract_text()
-                if extracted:
-                    text += extracted + " "
+            total_pages = len(pdf.pages)
+            logger.info(f"Starting PDF extraction for {total_pages} pages")
+            
+            # Early termination if PDF is too large
+            if total_pages > 100:
+                logger.warning(f"PDF has {total_pages} pages, which may cause delays. Processing first 50 pages.")
+                max_pages = 50
+            else:
+                max_pages = total_pages
+            
+            for page_num, page in enumerate(pdf.pages[:max_pages], 1):
+                try:
+                    # Use faster text extraction with some optimizations
+                    extracted = page.extract_text(
+                        layout=True,
+                        x_tolerance=1,
+                        y_tolerance=1
+                    )
+                    
+                    if extracted and len(extracted.strip()) > 10:  # Skip pages with minimal text
+                        text += extracted + " "
+                    
+                    # Log progress every 10 pages for debugging
+                    if page_num % 10 == 0:
+                        logger.info(f"Processed {page_num}/{min(max_pages, total_pages)} pages")
+                        
+                except Exception as page_error:
+                    logger.warning(f"Error extracting page {page_num}: {page_error}")
+                    continue  # Skip problematic pages and continue
+            
+            # Clean up memory
+            pdf.close()
+            
+            logger.info(f"PDF extraction completed. Extracted {len(text)} characters from {min(max_pages, total_pages)} pages")
+            
     except Exception as e:
         logger.error(f"Error extracting PDF: {e}")
         raise ValueError(f"PDF extraction failed: {e}")
-    return text
+    
+    # Validate extracted text
+    if not text or len(text.strip()) < 50:
+        raise ValueError("Extracted text is too short or empty. Please check if the PDF contains readable text.")
+    
+    # Limit text length to prevent memory issues
+    if len(text) > 50000:  # Limit to ~50k characters
+        text = text[:50000]
+        logger.info("Text truncated to 50,000 characters to prevent memory issues.")
+    
+    return text.strip()
 
 def extract_topics(text):
     if not text:

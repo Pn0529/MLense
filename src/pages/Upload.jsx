@@ -24,8 +24,26 @@ const Upload = () => {
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            // Validate file size (10MB limit)
+            const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+            if (file.size > maxSize) {
+                setError('File size exceeds 10MB limit. Please choose a smaller file.');
+                setSelectedFile(null);
+                setFileName('Supports PDF up to 10MB');
+                return;
+            }
+            
+            // Validate file type
+            if (file.type !== 'application/pdf') {
+                setError('Please select a valid PDF file.');
+                setSelectedFile(null);
+                setFileName('Supports PDF up to 10MB');
+                return;
+            }
+            
             setSelectedFile(file);
             setFileName(`Selected: ${file.name}`);
+            setError(''); // Clear any previous errors
         } else {
             setSelectedFile(null);
             setFileName('Supports PDF up to 10MB');
@@ -47,11 +65,16 @@ const Upload = () => {
 
         setIsUploading(true);
 
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
+
         try {
             const formData = new FormData();
             formData.append('file', selectedFile);
 
             const token = localStorage.getItem('jwt_token');
+            
             const response = await fetch(
                 `${API_BASE_URL}/analyze/${encodeURIComponent(branch)}`,
                 {
@@ -60,10 +83,13 @@ const Upload = () => {
                         'Authorization': `Bearer ${token}`
                     },
                     body: formData,
+                    signal: controller.signal,
                     // Content-Type is intentionally omitted so the browser
                     // sets it automatically with the correct multipart boundary.
                 }
             );
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 let errMsg = `Server error: ${response.status} ${response.statusText}`;
@@ -87,7 +113,15 @@ const Upload = () => {
             // Pass the raw API response to the Results page via navigation state
             navigate('/results', { state: { results: data, branch } });
         } catch (err) {
-            setError(err.message || 'An unexpected error occurred. Please try again.');
+            clearTimeout(timeoutId);
+            
+            if (err.name === 'AbortError') {
+                setError('Upload timed out. Please try again with a smaller file or check your connection.');
+            } else if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                setError('Network error. Please check your internet connection and try again.');
+            } else {
+                setError(err.message || 'An unexpected error occurred. Please try again.');
+            }
         } finally {
             setIsUploading(false);
         }

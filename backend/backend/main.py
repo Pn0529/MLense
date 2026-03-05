@@ -34,6 +34,13 @@ current_topic_of_the_day = None
 _resource_cache = {}
 CACHE_TTL = 600  # 10 minutes
 
+# Preload models at startup
+@app.on_event("startup")
+async def startup_event():
+    """Preload NLP models to reduce first request latency"""
+    from backend.services.nlp_service import preload_models
+    preload_models()
+
 
 # -------------------------------
 # CORS CONFIG - Allow your GitHub Pages site
@@ -95,13 +102,23 @@ async def analyze(branch: str, file: UploadFile = File(...), token: str = Depend
     # 1. Extract College Syllabus Text
     try:
         content = await file.read()
+        
+        # Validate file size (10MB limit)
+        max_size = 10 * 1024 * 1024  # 10MB in bytes
+        if len(content) > max_size:
+            raise HTTPException(status_code=413, detail="File size exceeds 10MB limit")
+        
         logger.info(f"File '{file.filename}' read successfully. Size: {len(content)} bytes.")
+        
+        # Extract text without signal-based timeout for Windows compatibility
         college_text = extract_text_from_pdf(content)
         
         if not college_text.strip():
             logger.warning("Empty text extracted from uploaded PDF.")
             raise HTTPException(status_code=400, detail="Could not extract text from PDF")
             
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
         logger.error(f"Error during PDF processing: {e}")
         raise HTTPException(status_code=500, detail=f"PDF extraction failed: {str(e)}")
@@ -157,41 +174,82 @@ async def analyze(branch: str, file: UploadFile = File(...), token: str = Depend
 
     # 4. Get Enriched Recommendations (Gaps + Summaries)
     high_priority_gaps = []
+    medium_priority_gaps = []
+    
     for r in results:
-        if "High" in r.get("priority", ""):
+        priority = r.get("priority", "")
+        if "🚨 High" in priority or "High" in priority:
             high_priority_gaps.append(r)
-            if len(high_priority_gaps) >= 8:
-                break
+        elif "🟡 Medium" in priority or "Medium" in priority:
+            medium_priority_gaps.append(r)
+    
+    # Determine which gaps to use for recommendations
+    if high_priority_gaps:
+        priority_gaps = high_priority_gaps[:3]  # Reduce to 3 for faster processing
+        gap_type = "high priority"
+    elif medium_priority_gaps:
+        priority_gaps = medium_priority_gaps[:3]  # Reduce to 3 for faster processing
+        gap_type = "medium priority"
+    else:
+        # No priority gaps found - create recommendations for top topics anyway
+        logger.info("No priority gaps found. Creating recommendations for top GATE topics...")
+        priority_gaps = results[:3]  # Reduce to 3 for faster processing
+        gap_type = "recommended"
+        for r in priority_gaps:
+            r["priority"] = "📚 Recommended"  # Override priority for display
+    
     recommendations = []
     youtube_links = []
     
-    logger.info(f"Found {len(high_priority_gaps)} high priority gaps. Fetching recommendations...")
+    logger.info(f"Found {len(priority_gaps)} {gap_type} gaps. Fetching recommendations...")
     
     try:
         model = get_model()
         util = get_util()
     except Exception as e:
         logger.error(f"Failed to load NLP model for summarization: {e}")
-        raise HTTPException(status_code=500, detail="Failed to initialize NLP model")
+        # Continue without model - just provide videos without summaries
+        model = None
+        util = None
 
-    for gap in high_priority_gaps:
+    # Simplified sequential processing for debugging
+    for i, gap in enumerate(priority_gaps):
         topic_name = gap["gate_topic"]
-        videos = fetch_youtube_videos(topic_name)
         
-        if videos and isinstance(videos[0], dict) and "error" not in videos[0]:
-            top_video = videos[0]
-            youtube_links.append(top_video['url'])
+        # Clear cache for every second topic to ensure variety
+        if i % 2 == 0:
+            from backend.services.youtube_service import clear_video_cache
+            clear_video_cache()
+        
+        try:
+            videos = fetch_youtube_videos(topic_name)
             
-            # Add AI Summary
-            v_id = top_video['url'].split("v=")[-1]
-            top_video['summary'] = get_video_summary(v_id, topic_name, model, util)
-            
-            recommendations.append({
-                "topic": topic_name,
-                "video": top_video
-            })
-        elif videos and isinstance(videos[0], dict) and "error" in videos[0]:
-            logger.warning(f"Error fetching YouTube videos for {topic_name}: {videos[0]['error']}")
+            if videos and len(videos) > 0 and isinstance(videos[0], dict) and "error" not in videos[0]:
+                top_video = videos[0]
+                youtube_links.append(top_video['url'])
+                
+                # Only generate summary if model is available
+                if model and util:
+                    try:
+                        v_id = top_video['url'].split("v=")[-1]
+                        summary = get_video_summary(v_id, topic_name, model, util)
+                        top_video['summary'] = summary
+                    except Exception as e:
+                        logger.warning(f"Summary generation failed for {topic_name}: {e}")
+                        top_video['summary'] = "Summary not available."
+                else:
+                    top_video['summary'] = "Summary temporarily disabled."
+                
+                recommendations.append({
+                    "topic": topic_name,
+                    "video": top_video
+                })
+            else:
+                logger.warning(f"No videos found for {topic_name}")
+                
+        except Exception as e:
+            logger.error(f"Error processing topic {topic_name}: {e}")
+            continue
 
     comparison_summary = f"Your syllabus has an overall match of {round(overall_similarity, 1)}% with the GATE {branch} syllabus. We identified {len(high_priority_gaps)} critical gaps where topics are either missing or have low similarity."
 
