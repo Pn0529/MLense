@@ -300,6 +300,52 @@ async def get_tod():
         "Best Video": best_video
     }
 
+@app.get("/resources/{topic}")
+async def get_resources_for_topic(topic: str):
+    """
+    Returns ranked YouTube videos for a given topic using TubeMatix scoring.
+    Returns top 3 videos ranked by educational relevance.
+    
+    Args:
+        topic: str, the learning topic to fetch videos for
+    
+    Returns:
+        dict with topic and list of ranked videos with TubeMatix scores
+    """
+    logger.info(f"Fetching TubeMatix-ranked resources for topic: {topic}")
+    
+    try:
+        from backend.services.youtube_service import fetch_and_rank_videos_by_topic
+        
+        videos = fetch_and_rank_videos_by_topic(topic, max_results=10, top_n=3)
+        
+        # Format response
+        formatted_videos = []
+        for v in videos:
+            formatted_videos.append({
+                "id": v.get("id", ""),
+                "title": v.get("title", ""),
+                "channel": v.get("channel", ""),
+                "url": v.get("url", ""),
+                "thumbnail": v.get("thumbnail", ""),
+                "duration": v.get("duration", ""),
+                "views": v.get("views", 0),
+                "likes": v.get("likes", 0),
+                "tubematix_score": round(v.get("tubematix_score", 0), 2)
+            })
+        
+        logger.info(f"Returning {len(formatted_videos)} ranked videos for '{topic}'")
+        
+        return {
+            "topic": topic,
+            "videos": formatted_videos,
+            "total": len(formatted_videos)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching resources for topic '{topic}': {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch resources: {str(e)}")
+
 # ─── PYQ (Previous Year Questions) Endpoints ───
 @app.get("/pyqs/categories")
 def pyq_categories():
