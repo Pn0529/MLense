@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 
 # Load .env FIRST — before any service imports that read os.getenv()
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,6 +43,8 @@ origins = [
     "https://exam-bridge-nexus.onrender.com",
     "http://localhost:3000",
     "http://localhost:5173", # Vite dev server
+    "http://localhost:5174", # Vite dev server (alternative)
+    "http://localhost:5175", # Vite dev server (current)
     "http://127.0.0.1:5500",
     "*" # Allowed for debugging, narrow down in production
 ]
