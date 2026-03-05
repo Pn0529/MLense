@@ -360,13 +360,30 @@ async def get_tod():
         # Format for human-readable display
         views_str = f"{raw_views:,}" if raw_views > 0 else "N/A"
         likes_str = f"{raw_likes:,}" if raw_likes > 0 else "N/A"
+        
+        # Get video ID and generate summary
+        video_url = v.get("url", "#")
+        video_id = video_url.split("v=")[-1] if "v=" in video_url else ""
+        
+        # Generate summary using AI
+        summary = "Summary not available."
+        try:
+            model = get_model()
+            util = get_util()
+            if model and util and video_id:
+                from backend.services.youtube_service import get_video_summary
+                summary = get_video_summary(video_id, topic_name, model, util, v.get("title", ""))
+        except Exception as e:
+            logger.warning(f"Summary generation failed for TOD video: {e}")
+        
         best_video = {
             "Title": v.get("title", "N/A"),
             "Channel": v.get("channel", "N/A"),
             "Views": views_str,
             "Likes": likes_str,
-            "Link": v.get("url", "#"),
-            "Thumbnail": v.get("thumbnail", "")
+            "Link": video_url,
+            "Thumbnail": v.get("thumbnail", ""),
+            "Summary": summary
         }
     
     return {
