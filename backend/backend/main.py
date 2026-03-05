@@ -391,14 +391,14 @@ class QuizResult(BaseModel):
 @app.post("/quiz_results")
 def submit_quiz_result(result: QuizResult, token: str = Depends(oauth2_scheme)):
     """Save user quiz result."""
-    user = get_current_user(token)
-    if not user:
+    user_email = get_current_user(token)
+    if not user_email:
         raise HTTPException(status_code=401, detail="Invalid token")
     if quiz_results_collection is None:
         raise HTTPException(status_code=503, detail="Database connection failed")
     
     doc = result.dict()
-    doc["user_id"] = user.id
+    doc["user_email"] = user_email
     doc["created_at"] = datetime.utcnow()
     quiz_results_collection.insert_one(doc)
     return {"msg": "Quiz result saved successfully"}
@@ -406,13 +406,13 @@ def submit_quiz_result(result: QuizResult, token: str = Depends(oauth2_scheme)):
 @app.get("/quiz_history")
 def get_quiz_history(token: str = Depends(oauth2_scheme)):
     """Get all quiz results for the user."""
-    user = get_current_user(token)
-    if not user:
+    user_email = get_current_user(token)
+    if not user_email:
         raise HTTPException(status_code=401, detail="Invalid token")
     if quiz_results_collection is None:
         raise HTTPException(status_code=503, detail="Database connection failed")
     
-    results = list(quiz_results_collection.find({"user_id": user.id}).sort("created_at", -1))
+    results = list(quiz_results_collection.find({"user_email": user_email}).sort("created_at", -1))
     for r in results:
         r["_id"] = str(r["_id"])
     return results

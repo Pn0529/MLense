@@ -582,13 +582,6 @@ const Resources = () => {
                     </div>
                 </div>
             )}
-                            fontSize: '0.95rem'
-                        }}
-                    >
-                        Go to Dashboard
-                    </button>
-                </div>
-            )}
         </main>
     );
 };

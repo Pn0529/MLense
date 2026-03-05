@@ -45,20 +45,20 @@ const Dashboard = () => {
             }
         };
         fetchData();
-    }, []);
 
-    // Refresh completed topics when page becomes visible or focus returns
-    useEffect(() => {
+        // Refresh data when page becomes visible or focus returns
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 const updatedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
                 setCompletedTopics(updatedTopics);
+                fetchData(); // Refetch quiz history and history
             }
         };
 
         const handleFocus = () => {
             const updatedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
             setCompletedTopics(updatedTopics);
+            fetchData(); // Refetch quiz history and history
         };
 
         const handleStorageChange = (e) => {
@@ -91,12 +91,49 @@ const Dashboard = () => {
     const pendingReviews = history.reduce((acc, curr) => acc + (curr.critical_gaps || 0), 0);
 
 
+    const handleRefreshScores = async () => {
+        const token = localStorage.getItem('jwt_token');
+        if (!token) return;
+
+        try {
+            const quizRes = await fetch(`${API_BASE_URL}/quiz_history`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (quizRes.ok) {
+                const data = await quizRes.json();
+                setQuizHistory(data);
+                console.log('Quiz history refreshed:', data);
+            }
+        } catch (err) {
+            console.error("Failed to refresh quiz history:", err);
+        }
+    };
+
     const handleDeleteAccount = () => {
         if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
             localStorage.clear();
             navigate('/signin');
         }
     };
+
+    // Calculate weekly activity data
+    const calculateWeeklyActivity = () => {
+        const weeklyData = [0, 0, 0, 0, 0, 0, 0]; // Mon-Sun
+        
+        // Count activities from both history and quizHistory
+        const allActivities = [...history, ...quizHistory];
+        
+        allActivities.forEach(activity => {
+            const date = new Date(activity.created_at);
+            const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0 = Mon, 6 = Sun
+            weeklyData[adjustedDay] += 1;
+        });
+        
+        return weeklyData;
+    };
+
+    const weeklyActivityData = calculateWeeklyActivity();
 
     const donutData = {
         labels: ['Completed Topics', 'Pending Topics'],
@@ -110,8 +147,8 @@ const Dashboard = () => {
     const barData = {
         labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
         datasets: [{
-            label: 'Hours Studied',
-            data: [2, 3.5, 1.5, 4, 2, 5, 3],
+            label: 'Activities',
+            data: weeklyActivityData,
             backgroundColor: '#2c3e50',
             borderRadius: 4
         }]
@@ -167,6 +204,16 @@ const Dashboard = () => {
                     <div className="stat-icon"><i className="fa-solid fa-check-double"></i></div>
                     <div className="stat-details"><h3>{completedTopics.length}</h3><p>Mastered</p></div>
                 </div>
+            </div>
+
+            <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+                <button 
+                    className="btn" 
+                    onClick={handleRefreshScores}
+                    style={{ background: 'var(--primary-green)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                    <i className="fa-solid fa-sync-alt"></i> Refresh Scores
+                </button>
             </div>
 
             <div className="dashboard-panel" style={{ marginBottom: '2rem' }}>

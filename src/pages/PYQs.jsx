@@ -78,7 +78,7 @@ const PYQs = () => {
                 const finalScore = score + (selectedAnswer === questions[currentQ].answer ? 1 : 0);
                 const percentage = Math.round((finalScore / questions.length) * 100);
                 try {
-                    await fetch(`${API_BASE_URL}/quiz_results`, {
+                    const response = await fetch(`${API_BASE_URL}/quiz_results`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -91,6 +91,11 @@ const PYQs = () => {
                             percentage: percentage
                         })
                     });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    console.log("Quiz result saved successfully:", data);
                 } catch (err) {
                     console.error("Failed to save quiz results:", err);
                 }
@@ -244,6 +249,9 @@ const PYQs = () => {
                         </button>
                         <button className="btn" onClick={() => { setSelectedCategory(''); setQuestions([]); }} style={{ background: 'var(--primary-navy)' }}>
                             <i className="fa-solid fa-list" style={{ marginRight: '8px' }}></i> Other Topics
+                        </button>
+                        <button className="btn" onClick={() => navigate('/dashboard')} style={{ background: '#f39c12' }}>
+                            <i className="fa-solid fa-chart-line" style={{ marginRight: '8px' }}></i> Dashboard
                         </button>
                         <button className="btn" onClick={() => navigate('/resources')} style={{ background: '#555' }}>
                             <i className="fa-solid fa-arrow-left" style={{ marginRight: '8px' }}></i> Resources
