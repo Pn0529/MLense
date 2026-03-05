@@ -15,6 +15,8 @@ db = None
 users_collection = None
 analyses_collection = None
 gate_topics_collection = None
+pyqs_collection = None
+quiz_results_collection = None
 
 try:
     # Set a short timeout for the initial connection attempt
@@ -26,6 +28,8 @@ try:
     users_collection = db["users"]
     analyses_collection = db["analyses"]
     gate_topics_collection = db["gate_topics"]
+    pyqs_collection = db["pyqs"]
+    quiz_results_collection = db["quiz_results"]
     logger.info("MongoDB collections initialized.")
 
 except Exception as e:

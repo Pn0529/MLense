@@ -68,9 +68,33 @@ const PYQs = () => {
         setAnswers(prev => [...prev, { questionIndex: currentQ, selected: selectedAnswer, correct: questions[currentQ].answer, isCorrect }]);
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentQ + 1 >= questions.length) {
             setQuizComplete(true);
+
+            // Send results to backend
+            const token = localStorage.getItem('jwt_token');
+            if (token) {
+                const finalScore = score + (selectedAnswer === questions[currentQ].answer ? 1 : 0);
+                const percentage = Math.round((finalScore / questions.length) * 100);
+                try {
+                    await fetch(`${API_BASE_URL}/quiz_results`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            topic: selectedCategory,
+                            score: finalScore,
+                            total: questions.length,
+                            percentage: percentage
+                        })
+                    });
+                } catch (err) {
+                    console.error("Failed to save quiz results:", err);
+                }
+            }
         } else {
             setCurrentQ(prev => prev + 1);
             setSelectedAnswer(null);

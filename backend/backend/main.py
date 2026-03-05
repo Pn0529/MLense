@@ -312,6 +312,45 @@ def pyq_by_topic(topic: str):
     results = get_pyqs_by_topic(topic)
     return {"topic": topic, "results": results}
 
+from backend.utils.database import quiz_results_collection
+from pydantic import BaseModel
+
+class QuizResult(BaseModel):
+    topic: str
+    score: int
+    total: int
+    percentage: float
+
+@app.post("/quiz_results")
+def submit_quiz_result(result: QuizResult, token: str = Depends(oauth2_scheme)):
+    """Save user quiz result."""
+    user = get_current_user(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    if quiz_results_collection is None:
+        raise HTTPException(status_code=503, detail="Database connection failed")
+    
+    doc = result.dict()
+    doc["user_id"] = user.id
+    doc["created_at"] = datetime.utcnow()
+    quiz_results_collection.insert_one(doc)
+    return {"msg": "Quiz result saved successfully"}
+
+@app.get("/quiz_history")
+def get_quiz_history(token: str = Depends(oauth2_scheme)):
+    """Get all quiz results for the user."""
+    user = get_current_user(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    if quiz_results_collection is None:
+        raise HTTPException(status_code=503, detail="Database connection failed")
+    
+    results = list(quiz_results_collection.find({"user_id": user.id}).sort("created_at", -1))
+    for r in results:
+        r["_id"] = str(r["_id"])
+    return results
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     logger.info(f"Starting server on port {port}")

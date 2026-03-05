@@ -11,10 +11,11 @@ const Dashboard = () => {
     const [userPhone, setUserPhone] = useState(localStorage.getItem('userPhone') || '+917893140112');
     const [completedTopics, setCompletedTopics] = useState(JSON.parse(localStorage.getItem('completedTopics') || '[]'));
     const [history, setHistory] = useState([]);
+    const [quizHistory, setQuizHistory] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchHistory = async () => {
+        const fetchData = async () => {
             const token = localStorage.getItem('jwt_token');
             if (!token) {
                 setIsLoading(false);
@@ -22,29 +23,41 @@ const Dashboard = () => {
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/history`, {
+                // Fetch analysis history
+                const histRes = await fetch(`${API_BASE_URL}/history`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (response.ok) {
-                    const data = await response.json();
-                    setHistory(data);
+                if (histRes.ok) {
+                    setHistory(await histRes.json());
+                }
+
+                // Fetch quiz history
+                const quizRes = await fetch(`${API_BASE_URL}/quiz_history`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (quizRes.ok) {
+                    setQuizHistory(await quizRes.json());
                 }
             } catch (err) {
-                console.error("Failed to fetch history:", err);
+                console.error("Failed to fetch dashboard data:", err);
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchHistory();
+        fetchData();
     }, []);
 
     // Dynamic stats
     const totalUploads = history.length;
     const evaluatedItems = history.length; // In this app, every upload is evaluated
-    const avgSimilarity = history.length > 0
-        ? Math.round(history.reduce((acc, curr) => acc + (curr.overall_similarity || 0), 0) / history.length)
+
+    // Average Quiz Score
+    const avgQuizScore = quizHistory.length > 0
+        ? Math.round(quizHistory.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / quizHistory.length)
         : 0;
+
     const pendingReviews = history.reduce((acc, curr) => acc + (curr.critical_gaps || 0), 0);
+
 
     const handleDeleteAccount = () => {
         if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
@@ -115,8 +128,8 @@ const Dashboard = () => {
                     <div className="stat-details"><h3>{pendingReviews}</h3><p>Critical Gaps</p></div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon"><i className="fa-solid fa-chart-line"></i></div>
-                    <div className="stat-details"><h3>{avgSimilarity}%</h3><p>Avg. Match</p></div>
+                    <div className="stat-icon"><i className="fa-solid fa-graduation-cap"></i></div>
+                    <div className="stat-details"><h3>{avgQuizScore}%</h3><p>Avg Quiz Score</p></div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-icon"><i className="fa-solid fa-check-double"></i></div>
