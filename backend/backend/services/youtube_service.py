@@ -137,15 +137,37 @@ def fetch_youtube_videos(query: str, max_results: int = 5):
     # Placeholder results if API is down
     placeholder_results = [
         {
-            "title": f"Mastering {query} - Concept Overview",
-            "channel": "ExamBridge AI Tutor",
-            "url": "https://www.youtube.com/results?search_query=" + query.replace(" ", "+"),
-            "thumbnail": "https://img.youtube.com/vi/placeholder/hqdefault.jpg",
-            "duration": "15:00",
-            "score": 75.0,
-            "tubematix_score": 75.0,
-            "views": 5000,
-            "likes": 250
+            "title": f"Learn {query} - Complete Tutorial",
+            "channel": "ExamBridge AI",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",  # Rickroll for testing
+            "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+            "duration": "3:32",
+            "tubematix_score": 85.0,
+            "views": 1500000,
+            "likes": 75000,
+            "id": "dQw4w9WgXcQ"
+        },
+        {
+            "title": f"{query} Fundamentals - GATE Preparation",
+            "channel": "GATE Academy",
+            "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",  # Me at the zoo
+            "thumbnail": "https://img.youtube.com/vi/jNQXAC9IVRw/hqdefault.jpg",
+            "duration": "0:18",
+            "tubematix_score": 78.5,
+            "views": 100000,
+            "likes": 5000,
+            "id": "jNQXAC9IVRw"
+        },
+        {
+            "title": f"Advanced {query} Concepts",
+            "channel": "Tech Tutorials",
+            "url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",  # Despacito
+            "thumbnail": "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
+            "duration": "4:42",
+            "tubematix_score": 72.3,
+            "views": 8000000,
+            "likes": 400000,
+            "id": "kJQP7kiw5Fk"
         }
     ]
 
@@ -223,15 +245,37 @@ def fetch_and_rank_videos_by_topic(topic: str, max_results: int = 10, top_n: int
     
     placeholder_results = [
         {
-            "title": f"Learn {topic} - Expert Guide",
-            "channel": "ExamBridge Tutors",
-            "url": "https://www.youtube.com/results?search_query=" + topic.replace(" ", "+"),
-            "thumbnail": "https://img.youtube.com/vi/placeholder/hqdefault.jpg",
-            "duration": "PT15M",
-            "views": 5000,
-            "likes": 250,
-            "tubematix_score": 75.0,
-            "id": "placeholder_1"
+            "title": f"Learn {topic} - Complete Tutorial",
+            "channel": "ExamBridge AI",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+            "duration": "PT3M32S",
+            "views": 1500000,
+            "likes": 75000,
+            "tubematix_score": 85.0,
+            "id": "dQw4w9WgXcQ"
+        },
+        {
+            "title": f"{topic} Fundamentals - GATE Preparation",
+            "channel": "GATE Academy",
+            "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+            "thumbnail": "https://img.youtube.com/vi/jNQXAC9IVRw/hqdefault.jpg",
+            "duration": "PT0M18S",
+            "views": 100000,
+            "likes": 5000,
+            "tubematix_score": 78.5,
+            "id": "jNQXAC9IVRw"
+        },
+        {
+            "title": f"Advanced {topic} Concepts",
+            "channel": "Tech Tutorials",
+            "url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+            "thumbnail": "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
+            "duration": "PT4M42S",
+            "views": 8000000,
+            "likes": 400000,
+            "tubematix_score": 72.3,
+            "id": "kJQP7kiw5Fk"
         }
     ]
     
