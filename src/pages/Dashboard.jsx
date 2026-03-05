@@ -187,12 +187,18 @@ const Dashboard = () => {
 
     const weeklyActivityData = calculateWeeklyActivity();
 
+    // Calculate chart data with proper fallbacks
+    const completedCount = completedTopics.length;
+    const pendingCount = Math.max(0, pendingReviews - completedCount);
+    
+    // Ensure we have at least some data to show in the donut chart
     const donutData = {
-        labels: ['Completed Topics', 'Pending Topics'],
+        labels: completedCount === 0 && pendingCount === 0 ? ['No Data', 'Start Learning'] : ['Completed Topics', 'Pending Topics'],
         datasets: [{
-            data: [completedTopics.length, Math.max(0, pendingReviews - completedTopics.length)],
-            backgroundColor: ['#2ecc71', '#e74c3c'],
-            borderWidth: 0
+            data: completedCount === 0 && pendingCount === 0 ? [0, 1] : [completedCount, pendingCount],
+            backgroundColor: completedCount === 0 && pendingCount === 0 ? ['#e0e0e0', '#95a5a6'] : ['#2ecc71', '#e74c3c'],
+            borderWidth: 0,
+            hoverOffset: 4
         }]
     };
 
@@ -201,8 +207,9 @@ const Dashboard = () => {
         datasets: [{
             label: 'Activities',
             data: weeklyActivityData,
-            backgroundColor: '#2c3e50',
-            borderRadius: 4
+            backgroundColor: weeklyActivityData.every(v => v === 0) ? '#95a5a6' : '#2c3e50',
+            borderRadius: 4,
+            borderSkipped: false
         }]
     };
 
@@ -363,12 +370,22 @@ const Dashboard = () => {
                     <div style={{ height: '300px' }}>
                         <Doughnut data={donutData} options={chartOptions} />
                     </div>
+                    <p style={{ textAlign: 'center', marginTop: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                        {completedTopics.length === 0 && pendingReviews === 0 
+                            ? 'Upload a syllabus and mark topics complete to see progress' 
+                            : `${completedTopics.length} completed • ${Math.max(0, pendingReviews - completedTopics.length)} pending topics`}
+                    </p>
                 </div>
                 <div className="dashboard-panel">
                     <h3>Weekly Activity</h3>
                     <div style={{ height: '300px' }}>
                         <Bar data={barData} options={barOptions} />
                     </div>
+                    <p style={{ textAlign: 'center', marginTop: '1rem', color: '#666', fontSize: '0.9rem' }}>
+                        {weeklyActivityData.every(v => v === 0) 
+                            ? 'No activity recorded this week. Upload files or take quizzes!' 
+                            : `Total: ${weeklyActivityData.reduce((a,b) => a+b, 0)} activities this week`}
+                    </p>
                 </div>
             </div>
         </main>

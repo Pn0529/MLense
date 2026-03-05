@@ -5,6 +5,9 @@ from backend.utils.database import users_collection
 
 router = APIRouter(tags=["Authentication"])
 
+# In-memory fallback for users when MongoDB is unavailable
+_in_memory_users = {}
+
 
 class UserRegister(BaseModel):
     name: str
@@ -19,22 +22,30 @@ class UserLogin(BaseModel):
 
 @router.post("/register")
 def register(user: UserRegister):
-    if users_collection is None:
-        raise HTTPException(status_code=503, detail="Database connection is not available. Please check MongoDB IP whitelisting.")
-    
     # Check if user already exists
-    existing_user = users_collection.find_one({"email": user.email})
-
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
-
-    # Insert new user
-    users_collection.insert_one({
-        "name": user.name,
-        "email": user.email,
-        "phone": user.phone # Storing plain for this specific project flow
-    })
-
+    if users_collection is not None:
+        # Use MongoDB if available
+        existing_user = users_collection.find_one({"email": user.email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="User already exists")
+        
+        # Insert new user
+        users_collection.insert_one({
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone
+        })
+    else:
+        # Use in-memory fallback
+        if user.email in _in_memory_users:
+            raise HTTPException(status_code=400, detail="User already exists")
+        
+        _in_memory_users[user.email] = {
+            "name": user.name,
+            "email": user.email,
+            "phone": user.phone
+        }
+    
     # Auto-login upon registration
     access_token = create_access_token({"sub": user.email})
     return {
@@ -46,12 +57,15 @@ def register(user: UserRegister):
 
 @router.post("/login")
 def login(user: UserLogin):
-    if users_collection is None:
-        raise HTTPException(status_code=503, detail="Database connection is not available. Please check MongoDB IP whitelisting.")
-
-    # Find user in database
-    db_user = users_collection.find_one({"email": user.email})
-
+    db_user = None
+    
+    if users_collection is not None:
+        # Use MongoDB if available
+        db_user = users_collection.find_one({"email": user.email})
+    else:
+        # Use in-memory fallback
+        db_user = _in_memory_users.get(user.email)
+    
     if not db_user:
         raise HTTPException(status_code=400, detail="User not found")
 

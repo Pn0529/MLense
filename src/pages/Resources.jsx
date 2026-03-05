@@ -11,6 +11,94 @@ const Resources = () => {
     const [loadingTod, setLoadingTod] = useState(false);
     const [topicVideos, setTopicVideos] = useState({});
     const [loadingVideos, setLoadingVideos] = useState(false);
+    const [todPyqs, setTodPyqs] = useState([]);
+    const [loadingTodPyqs, setLoadingTodPyqs] = useState(false);
+    const [isTodCompleted, setIsTodCompleted] = useState(false);
+    const [showQuizWarning, setShowQuizWarning] = useState(false);
+    const [completedRecommendations, setCompletedRecommendations] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('completedRecommendations') || '[]');
+        } catch {
+            return [];
+        }
+    });
+    const [recQuizWarnings, setRecQuizWarnings] = useState({});
+
+    // Check if Topic of the Day is already completed
+    useEffect(() => {
+        if (location.state?.topic_of_the_day) {
+            const topicName = location.state.topic_of_the_day["Topic Name"] || location.state.topic_of_the_day["Topic"];
+            if (topicName) {
+                const completed = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+                setIsTodCompleted(completed.includes(topicName));
+            }
+        }
+    }, [location.state?.topic_of_the_day]);
+
+    // Check if user has completed quizzes for a specific topic
+    const hasCompletedQuizzesForTopic = (topicName) => {
+        if (!topicName) return false;
+        const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+        return quizHistory.some(q => q.topic === topicName);
+    };
+
+    // Handle marking a recommendation topic as complete
+    const handleRecommendationComplete = (topic) => {
+        if (!topic) return;
+
+        // Check if quizzes are completed
+        if (!hasCompletedQuizzesForTopic(topic)) {
+            setRecQuizWarnings(prev => ({ ...prev, [topic]: true }));
+            return;
+        }
+
+        const completed = JSON.parse(localStorage.getItem('completedRecommendations') || '[]');
+        if (!completed.includes(topic)) {
+            completed.push(topic);
+            localStorage.setItem('completedRecommendations', JSON.stringify(completed));
+            setCompletedRecommendations(completed);
+            setRecQuizWarnings(prev => ({ ...prev, [topic]: false }));
+            
+            // Also add to main completed topics for dashboard
+            const mainCompleted = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+            if (!mainCompleted.includes(topic)) {
+                mainCompleted.push(topic);
+                localStorage.setItem('completedTopics', JSON.stringify(mainCompleted));
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'completedTopics',
+                    newValue: JSON.stringify(mainCompleted)
+                }));
+            }
+        }
+    };
+
+    // Handle marking Topic of the Day as complete
+    const handleTodComplete = () => {
+        if (!todData) return;
+        
+        const topicName = todData["Topic Name"] || todData["Topic"];
+        if (!topicName) return;
+
+        // Check if quizzes are completed
+        if (!hasCompletedQuizzesForTopic(topicName)) {
+            setShowQuizWarning(true);
+            return;
+        }
+
+        const completed = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+        if (!completed.includes(topicName)) {
+            completed.push(topicName);
+            localStorage.setItem('completedTopics', JSON.stringify(completed));
+            setIsTodCompleted(true);
+            setShowQuizWarning(false);
+            
+            // Trigger storage event for other tabs
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'completedTopics',
+                newValue: JSON.stringify(completed)
+            }));
+        }
+    };
 
     // Fetch Topic of the Day
     useEffect(() => {
@@ -24,6 +112,22 @@ const Resources = () => {
                 .then(data => {
                     setTodData(data);
                     setLoadingTod(false);
+                    
+                    // Fetch PYQs for the topic
+                    const topicName = data["Topic Name"] || data["Topic"];
+                    if (topicName) {
+                        setLoadingTodPyqs(true);
+                        fetch(`${API_BASE_URL}/pyqs/${encodeURIComponent(topicName)}`)
+                            .then(res => res.json())
+                            .then(pyqData => {
+                                setTodPyqs(pyqData.results || []);
+                                setLoadingTodPyqs(false);
+                            })
+                            .catch(err => {
+                                console.error("Failed to fetch PYQs for TOD:", err);
+                                setLoadingTodPyqs(false);
+                            });
+                    }
                 })
                 .catch(err => {
                     console.error("Failed to fetch TOD:", err);
@@ -150,6 +254,17 @@ const Resources = () => {
                                     }}>
                                     <i className="fa-brands fa-youtube"></i> Watch on YouTube
                                 </a>
+                                <a href={`/pyqs/${encodeURIComponent(tod["Topic Name"] || tod["Topic"])}`}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                        background: 'var(--primary-navy)', color: '#fff', fontWeight: 700,
+                                        padding: '0.7rem 1.5rem', borderRadius: '8px',
+                                        textDecoration: 'none', fontSize: '1rem',
+                                        boxShadow: '0 4px 15px rgba(44, 62, 80, 0.4)', transition: 'transform 0.2s',
+                                        marginLeft: '10px'
+                                    }}>
+                                    <i className="fa-solid fa-question-circle"></i> Practice PYQs
+                                </a>
                             </div>
                         </div>
                     )}
@@ -173,6 +288,57 @@ const Resources = () => {
                                 }}>
                                 <i className="fa-brands fa-youtube"></i> Search on YouTube
                             </a>
+                        </div>
+                    )}
+
+                    {/* Mark as Complete Button */}
+                    {!isTodCompleted ? (
+                        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                            {showQuizWarning && (
+                                <div style={{ 
+                                    background: '#ffeaa7', 
+                                    border: '1px solid #fdcb6e', 
+                                    borderRadius: '8px', 
+                                    padding: '1rem', 
+                                    marginBottom: '1rem',
+                                    color: '#d63031'
+                                }}>
+                                    <i className="fa-solid fa-exclamation-triangle" style={{ marginRight: '8px' }}></i>
+                                    <strong>Please complete the practice quiz first!</strong>
+                                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>
+                                        You need to attempt at least one quiz before marking this topic as complete.
+                                    </p>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleTodComplete}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    background: 'linear-gradient(135deg, #2ecc71, #27ae60)', 
+                                    color: '#fff', fontWeight: 700,
+                                    padding: '1rem 2rem', borderRadius: '8px',
+                                    border: 'none', cursor: 'pointer', fontSize: '1.1rem',
+                                    boxShadow: '0 4px 15px rgba(46, 204, 113, 0.4)',
+                                    transition: 'transform 0.2s'
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                <i className="fa-solid fa-check-circle"></i> I'm Done - Mark as Complete
+                            </button>
+                            <p style={{ fontSize: '0.85rem', color: '#7f8c8d', marginTop: '0.5rem' }}>
+                                Click after watching the video and completing practice questions
+                            </p>
+                        </div>
+                    ) : (
+                        <div style={{ marginTop: '1.5rem', textAlign: 'center', padding: '1rem', background: '#d5f4e6', borderRadius: '8px' }}>
+                            <i className="fa-solid fa-check-circle" style={{ color: '#2ecc71', fontSize: '1.5rem', marginBottom: '0.5rem' }}></i>
+                            <p style={{ color: '#27ae60', fontWeight: 600, margin: '0' }}>
+                                Topic Completed! 🎉
+                            </p>
+                            <p style={{ fontSize: '0.85rem', color: '#2ecc71', margin: '0.5rem 0 0 0' }}>
+                                This topic has been marked as complete in your dashboard.
+                            </p>
                         </div>
                     )}
                 </div>
@@ -248,7 +414,7 @@ const Resources = () => {
                                             >
                                                 {/* Thumbnail */}
                                                 <a
-                                                    href={video.url}
+                                                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(topic + " GATE lecture tutorial")}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     style={{
@@ -305,7 +471,7 @@ const Resources = () => {
                                                 <div style={{ padding: '1.2rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                                     {/* Title */}
                                                     <a
-                                                        href={video.url}
+                                                        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(topic + " GATE lecture tutorial")}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         style={{
@@ -349,6 +515,25 @@ const Resources = () => {
                                                         </span>
                                                     </div>
 
+                                                    {/* Summary Display */}
+                                                    {video.summary && (
+                                                        <div style={{ 
+                                                            background: '#f8f9fa', 
+                                                            padding: '0.75rem', 
+                                                            borderRadius: '6px', 
+                                                            marginBottom: '0.75rem',
+                                                            fontSize: '0.85rem',
+                                                            color: '#555',
+                                                            borderLeft: '3px solid #3498db'
+                                                        }}>
+                                                            <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600 }}>
+                                                                <i className="fa-solid fa-file-lines" style={{ marginRight: '6px', color: '#3498db' }}></i>
+                                                                AI Summary
+                                                            </p>
+                                                            <p style={{ margin: 0, lineHeight: 1.4 }}>{video.summary.substring(0, 150)}...</p>
+                                                        </div>
+                                                    )}
+
                                                     {/* CTA Buttons */}
                                                     <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
                                                         <a
@@ -382,6 +567,48 @@ const Resources = () => {
                                                         >
                                                             <i className="fa-brands fa-youtube"></i> Watch
                                                         </a>
+                                                        {video.summary && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    const content = `Video: ${video.title}\nChannel: ${video.channel}\nURL: ${video.url}\n\nAI Summary:\n${video.summary}\n\nGenerated by ExamBridge AI`;
+                                                                    const blob = new Blob([content], { type: 'text/plain' });
+                                                                    const url = window.URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a');
+                                                                    a.href = url;
+                                                                    a.download = `${video.title.replace(/[^a-zA-Z0-9]/g, '_')}_Summary.txt`;
+                                                                    document.body.appendChild(a);
+                                                                    a.click();
+                                                                    a.remove();
+                                                                    window.URL.revokeObjectURL(url);
+                                                                }}
+                                                                style={{
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    gap: '6px',
+                                                                    background: 'linear-gradient(135deg, #3498db, #2980b9)',
+                                                                    color: '#fff',
+                                                                    fontWeight: 700,
+                                                                    padding: '0.6rem 0.8rem',
+                                                                    borderRadius: '6px',
+                                                                    border: 'none',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '0.9rem',
+                                                                    boxShadow: '0 4px 12px rgba(52, 152, 219, 0.3)',
+                                                                    transition: 'all 0.2s'
+                                                                }}
+                                                                onMouseOver={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(52, 152, 219, 0.4)';
+                                                                }}
+                                                                onMouseOut={(e) => {
+                                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(52, 152, 219, 0.3)';
+                                                                }}
+                                                            >
+                                                                <i className="fa-solid fa-download"></i> Summary
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -503,6 +730,71 @@ const Resources = () => {
                                                 Start Quiz
                                             </button>
                                         </div>
+
+                                        {/* Divider */}
+                                        <div style={{ height: '1px', background: 'rgba(255,255,255,0.3)', margin: '0.5rem 0' }}></div>
+
+                                        {/* I'm Done Button */}
+                                        {completedRecommendations.includes(topic) ? (
+                                            <div style={{ 
+                                                textAlign: 'center', 
+                                                padding: '0.75rem', 
+                                                background: 'rgba(46, 204, 113, 0.2)', 
+                                                borderRadius: '6px',
+                                                border: '1px solid rgba(46, 204, 113, 0.5)'
+                                            }}>
+                                                <i className="fa-solid fa-check-circle" style={{ color: '#2ecc71', marginRight: '8px' }}></i>
+                                                <span style={{ color: '#2ecc71', fontWeight: 600 }}>Topic Completed!</span>
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                {recQuizWarnings[topic] && (
+                                                    <div style={{ 
+                                                        background: 'rgba(255, 234, 167, 0.9)', 
+                                                        border: '1px solid #fdcb6e', 
+                                                        borderRadius: '6px', 
+                                                        padding: '0.75rem', 
+                                                        marginBottom: '0.75rem',
+                                                        color: '#d63031',
+                                                        fontSize: '0.85rem'
+                                                    }}>
+                                                        <i className="fa-solid fa-exclamation-triangle" style={{ marginRight: '6px' }}></i>
+                                                        Complete the quiz first!
+                                                    </div>
+                                                )}
+                                                <button
+                                                    onClick={() => handleRecommendationComplete(topic)}
+                                                    style={{
+                                                        width: '100%',
+                                                        background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+                                                        color: '#fff',
+                                                        fontWeight: 700,
+                                                        border: 'none',
+                                                        padding: '0.8rem 1.5rem',
+                                                        borderRadius: '6px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '1rem',
+                                                        boxShadow: '0 4px 12px rgba(46, 204, 113, 0.3)',
+                                                        transition: 'all 0.2s',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '8px'
+                                                    }}
+                                                    onMouseOver={(e) => {
+                                                        e.currentTarget.style.transform = 'scale(1.02)';
+                                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(46, 204, 113, 0.4)';
+                                                    }}
+                                                    onMouseOut={(e) => {
+                                                        e.currentTarget.style.transform = 'scale(1)';
+                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(46, 204, 113, 0.3)';
+                                                    }}
+                                                >
+                                                    <i className="fa-solid fa-check-circle"></i>
+                                                    I'm Done - Mark Complete
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

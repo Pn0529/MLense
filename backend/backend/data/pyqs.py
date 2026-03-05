@@ -348,14 +348,8 @@ def get_pyqs_by_topic(topic_name: str):
                 "questions": questions
             })
 
-    # If no match in local either, return all local categories
-    if not results:
-        for category, questions in GATE_PYQS.items():
-            results.append({
-                "category": category,
-                "questions": questions
-            })
-
+    # If no match found, return empty array instead of all categories
+    # This prevents showing the same questions for every unrelated topic
     return results
 
 def get_all_categories():
