@@ -1,0 +1,304 @@
+import os
+from dotenv import load_dotenv
+
+# Load .env FIRST — before any service imports that read os.getenv()
+load_dotenv()
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime
+
+from backend.services.nlp_service import extract_text_from_pdf, extract_topics, compute_overall_similarity, topic_wise_similarity_ranking, get_model, get_util
+from backend.services.youtube_service import fetch_youtube_videos, get_video_summary
+from backend.utils.auth_utils import get_current_user
+from backend.utils.database import analyses_collection
+import uvicorn
+import logging
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="ExamBridge AI API")
+
+# Persistent storage for Topic of the Day
+current_topic_of_the_day = None
+
+
+# -------------------------------
+# CORS CONFIG - Allow your GitHub Pages site
+# -------------------------------
+origins = [
+    "https://pothulaannapurna8.github.io",
+    "https://exam-bridge-nexus.onrender.com",
+    "http://localhost:3000",
+    "http://localhost:5173", # Vite dev server
+    "http://127.0.0.1:5500",
+    "*" # Allowed for debugging, narrow down in production
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Register Auth Router
+from backend.routes.auth import router as auth_router
+app.include_router(auth_router, prefix="/auth")
+
+PDF_FOLDER = "gate_pdfs"
+
+@app.get("/")
+def home():
+    logger.info("Root endpoint hit.")
+    return {"status": "ExamBridge AI API is Running 🚀"}
+
+@app.get("/health")
+def health_check():
+    logger.info("Health check endpoint hit.")
+    return {"status": "running"}
+
+@app.post("/analyze/{branch}")
+async def analyze(branch: str, file: UploadFile = File(...), token: str = Depends(oauth2_scheme)):
+    """
+    Main endpoint for the GitHub frontend.
+    1. Authenticates user.
+    2. Extracts text from uploaded PDF.
+    3. Compares against the specified GATE branch PDF.
+    4. Returns similarity score, gaps, and summarized YouTube lectures.
+    5. Saves analysis to MongoDB.
+    """
+    # 0. Authenticate User
+    user_email = get_current_user(token)
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    logger.info(f"Received analysis request from {user_email} for branch: {branch}")
+    
+    # 1. Extract College Syllabus Text
+    try:
+        content = await file.read()
+        logger.info(f"File '{file.filename}' read successfully. Size: {len(content)} bytes.")
+        college_text = extract_text_from_pdf(content)
+        
+        if not college_text.strip():
+            logger.warning("Empty text extracted from uploaded PDF.")
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+            
+    except Exception as e:
+        logger.error(f"Error during PDF processing: {e}")
+        raise HTTPException(status_code=500, detail=f"PDF extraction failed: {str(e)}")
+
+    # 2. Load GATE Syllabus Topics (Database Priority)
+    gate_topics = []
+    from backend.utils.database import gate_topics_collection
+    
+    # Try fetching from database first
+    if gate_topics_collection is not None:
+        try:
+            db_topics_entry = gate_topics_collection.find_one({"branch": branch})
+            if db_topics_entry:
+                gate_topics = db_topics_entry.get("topics", [])
+                logger.info(f"Loaded {len(gate_topics)} predefined GATE topics for '{branch}' from MongoDB.")
+        except Exception as e:
+            logger.warning(f"Failed to fetch GATE topics from DB: {e}. Falling back to PDF.")
+
+    if not gate_topics:
+        # Fallback to PDF extraction
+        gate_pdf_path = os.path.join(PDF_FOLDER, f"{branch}.pdf")
+        if not os.path.exists(gate_pdf_path):
+            gate_pdf_path = f"{branch}.pdf" # check root
+            
+        if not os.path.exists(gate_pdf_path):
+            logger.error(f"GATE branch file not found: {gate_pdf_path}")
+            raise HTTPException(status_code=404, detail=f"GATE branch {branch} not found and no DB record exists.")
+            
+        try:
+            with open(gate_pdf_path, "rb") as f:
+                gate_content = f.read()
+                gate_text = extract_text_from_pdf(gate_content)
+                gate_topics = extract_topics(gate_text)
+                logger.info(f"GATE syllabus for '{branch}' extracted from PDF (fallback).")
+        except Exception as e:
+            logger.error(f"Error reading GATE syllabus PDF: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to process GATE syllabus: {str(e)}")
+
+    # 3. Perform AI Analysis
+    logger.info("Starting AI NLP analysis...")
+    try:
+        # For overall similarity, we still use the full text if available, 
+        # but for matching we use the extracted topics.
+        # Fallback for gate_text if we only have topics from DB
+        gate_text_for_sim = " ".join(gate_topics) 
+        
+        overall_similarity = compute_overall_similarity(college_text, gate_text_for_sim)
+        college_topics = extract_topics(college_text)
+        results = topic_wise_similarity_ranking(college_topics, gate_topics)
+    except Exception as e:
+        logger.error(f"AI Analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=f"AI analysis failed: {str(e)}")
+
+    # 4. Get Enriched Recommendations (Gaps + Summaries)
+    high_priority_gaps = []
+    for r in results:
+        if "High" in r.get("priority", ""):
+            high_priority_gaps.append(r)
+            if len(high_priority_gaps) >= 8:
+                break
+    recommendations = []
+    youtube_links = []
+    
+    logger.info(f"Found {len(high_priority_gaps)} high priority gaps. Fetching recommendations...")
+    
+    try:
+        model = get_model()
+        util = get_util()
+    except Exception as e:
+        logger.error(f"Failed to load NLP model for summarization: {e}")
+        raise HTTPException(status_code=500, detail="Failed to initialize NLP model")
+
+    for gap in high_priority_gaps:
+        topic_name = gap["gate_topic"]
+        videos = fetch_youtube_videos(topic_name)
+        
+        if videos and isinstance(videos[0], dict) and "error" not in videos[0]:
+            top_video = videos[0]
+            youtube_links.append(top_video['url'])
+            
+            # Add AI Summary
+            v_id = top_video['url'].split("v=")[-1]
+            top_video['summary'] = get_video_summary(v_id, topic_name, model, util)
+            
+            recommendations.append({
+                "topic": topic_name,
+                "video": top_video
+            })
+        elif videos and isinstance(videos[0], dict) and "error" in videos[0]:
+            logger.warning(f"Error fetching YouTube videos for {topic_name}: {videos[0]['error']}")
+
+    comparison_summary = f"Your syllabus has an overall match of {round(overall_similarity, 1)}% with the GATE {branch} syllabus. We identified {len(high_priority_gaps)} critical gaps where topics are either missing or have low similarity."
+
+    logger.info("Generating Topic of the Day...")
+    topic_of_the_day = None
+    global current_topic_of_the_day
+    if results:
+        # Pick highest priority topic not mastered
+        highest_priority_gap = next((r for r in results if "High" in r.get("priority", "")), None)
+        if not highest_priority_gap:
+            highest_priority_gap = next((r for r in results if "Medium" in r.get("priority", "")), None)
+        if not highest_priority_gap:
+            highest_priority_gap = results[0]
+            
+        selected_topic_name = highest_priority_gap["gate_topic"]
+        
+        # Explain
+        priority_label = highest_priority_gap.get("priority", "Low").replace("🚨 ", "").replace("🟡 ", "").replace("✅ ", "")
+        explanation = f"This topic is selected today because it is a {priority_label}-priority concept with significant weightage in GATE Operating Systems. It is a critical link in your syllabus coverage."
+        
+        # Store persistently in memory
+        current_topic_of_the_day = {
+            "topic_name": selected_topic_name,
+            "explanation": explanation
+        }
+        
+        topic_of_the_day = {
+            "Topic Name": selected_topic_name,
+            "Explanation": explanation
+        }
+
+    logger.info("Analysis complete. Returning response.")
+    
+    analysis_data = {
+        "user_email": user_email,
+        "branch": branch,
+        "comparison_result": comparison_summary,
+        "overall_similarity": round(overall_similarity, 1),
+        "critical_gaps": len(high_priority_gaps),
+        "gate_topic_count": len(gate_topics),
+        "results": results,
+        "recommendations": recommendations,
+        "topic_of_the_day": topic_of_the_day,
+        "created_at": datetime.utcnow()
+    }
+
+    try:
+        analyses_collection.insert_one(analysis_data)
+        logger.info(f"Analysis saved to database for user {user_email}")
+    except Exception as e:
+        logger.error(f"Failed to save analysis to database: {e}")
+
+    # Return structured JSON as requested
+    # Remove _id from response
+    analysis_data.pop("_id", None)
+    return analysis_data
+
+
+@app.get("/history")
+async def get_history(token: str = Depends(oauth2_scheme)):
+    """
+    Returns the analysis history for the authenticated user.
+    """
+    user_email = get_current_user(token)
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    logger.info(f"Fetching history for user: {user_email}")
+    try:
+        cursor = analyses_collection.find({"user_email": user_email}).sort("created_at", -1)
+        history = list(cursor)
+        for item in history:
+            item["_id"] = str(item["_id"])
+        return history
+    except Exception as e:
+        logger.error(f"Failed to fetch history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch history")
+
+@app.get("/topic-of-the-day")
+async def get_tod():
+    """
+    Returns the persistent Topic of the Day with a fresh live YouTube search.
+    """
+    global current_topic_of_the_day
+    if not current_topic_of_the_day:
+        raise HTTPException(status_code=404, detail="No syllabus has been analyzed yet to generate a Topic of the Day.")
+    
+    topic_name = current_topic_of_the_day["topic_name"]
+    explanation = current_topic_of_the_day["explanation"]
+    
+    # 3. Fetch YouTube videos (Dynamic ranking every time)
+    logger.info(f"Fetching fresh YouTube recommendation for TOD: {topic_name}")
+    videos = fetch_youtube_videos(f"{topic_name} Operating Systems GATE", max_results=1)
+    
+    best_video = None
+    if videos and isinstance(videos[0], dict) and "error" not in videos[0]:
+        v = videos[0]
+        raw_views = v.get("views", 0)
+        raw_likes = v.get("likes", 0)
+        # Format for human-readable display
+        views_str = f"{raw_views:,}" if raw_views > 0 else "N/A"
+        likes_str = f"{raw_likes:,}" if raw_likes > 0 else "N/A"
+        best_video = {
+            "Title": v.get("title", "N/A"),
+            "Channel": v.get("channel", "N/A"),
+            "Views": views_str,
+            "Likes": likes_str,
+            "Link": v.get("url", "#"),
+            "Thumbnail": v.get("thumbnail", "")
+        }
+    
+    return {
+        "Topic": topic_name,
+        "Explanation": explanation,
+        "Best Video": best_video
+    }
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+    logger.info(f"Starting server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
