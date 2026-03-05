@@ -10,6 +10,59 @@ logger = logging.getLogger(__name__)
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 
+# Static fallback video library when API key is missing. Topics mapped to sample video metadata.
+SAMPLE_VIDEOS = {
+    "operating systems": [
+        {
+            "id": "dQw4w9WgXcQ",
+            "title": "Operating Systems Complete Tutorial",
+            "channel": "ExamBridge AI",
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "thumbnail": "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+            "duration": "PT3M32S",
+            "views": 1500000,
+            "likes": 75000
+        },
+        {
+            "id": "kJQP7kiw5Fk",
+            "title": "OS Concepts Explained",
+            "channel": "Tech Tutorials",
+            "url": "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+            "thumbnail": "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg",
+            "duration": "PT4M42S",
+            "views": 8000000,
+            "likes": 400000
+        }
+    ],
+    "networks": [
+        {
+            "id": "sBws8MSXN7A",
+            "title": "Computer Networks Basics",
+            "channel": "Network Academy",
+            "url": "https://www.youtube.com/watch?v=sBws8MSXN7A",
+            "thumbnail": "https://img.youtube.com/vi/sBws8MSXN7A/hqdefault.jpg",
+            "duration": "PT10M15S",
+            "views": 250000,
+            "likes": 12000
+        }
+    ]
+}
+
+def get_static_videos(topic: str, max_results: int = 5):
+    """Return a list of statically defined videos relevant to the topic."""
+    topic_lower = topic.lower()
+    matched = []
+    for key, vids in SAMPLE_VIDEOS.items():
+        if key in topic_lower:
+            matched.extend(vids)
+    if not matched:
+        for vids in SAMPLE_VIDEOS.values():
+            matched.extend(vids)
+    for v in matched:
+        v["tubematix_score"] = calculate_tubematix_score(v, topic, matched)
+    matched.sort(key=lambda x: x["tubematix_score"], reverse=True)
+    return matched[:max_results]
+
 def get_youtube_client():
     # Read key dynamically every time to support load_dotenv() and env var changes
     api_key = os.getenv("YOUTUBE_API_KEY") or YOUTUBE_API_KEY
@@ -172,8 +225,8 @@ def fetch_youtube_videos(query: str, max_results: int = 5):
     ]
 
     if youtube is None:
-        logger.warning("YouTube client not available. Returning placeholders.")
-        return placeholder_results
+        logger.warning("YouTube client not available. Falling back to static videos.")
+        return get_static_videos(query, max_results=max_results)
 
     try:
         # 1. Primary Search - Professional Lectures
@@ -188,8 +241,8 @@ def fetch_youtube_videos(query: str, max_results: int = 5):
         video_ids = [item['id']['videoId'] for item in search.get('items', [])]
         
         if not video_ids:
-            logger.info("No videos found. Returning placeholders.")
-            return placeholder_results
+            logger.info("No videos found. Returning static samples.")
+            return get_static_videos(query, max_results=max_results)
 
         # 2. Get Statistics
         videos_data = youtube.videos().list(
@@ -226,7 +279,8 @@ def fetch_youtube_videos(query: str, max_results: int = 5):
 
     except Exception as e:
         logger.error(f"YouTube Fetch Error: {e}")
-        return placeholder_results
+        # fallback to static videos when API call fails
+        return get_static_videos(query, max_results=max_results)
 
 def fetch_and_rank_videos_by_topic(topic: str, max_results: int = 10, top_n: int = 3):
     """
@@ -280,8 +334,8 @@ def fetch_and_rank_videos_by_topic(topic: str, max_results: int = 10, top_n: int
     ]
     
     if youtube is None:
-        logger.warning("YouTube client not available. Returning placeholders.")
-        return placeholder_results[:top_n]
+        logger.warning("YouTube client not available. Falling back to static videos.")
+        return get_static_videos(topic, max_results=max_results)[:top_n]
     
     try:
         # Search for videos
@@ -302,7 +356,7 @@ def fetch_and_rank_videos_by_topic(topic: str, max_results: int = 10, top_n: int
         
         if not video_ids:
             logger.warning(f"No videos found for topic: {topic}")
-            return placeholder_results[:top_n]
+            return get_static_videos(topic, max_results=max_results)[:top_n]
         
         # Get full video details
         videos_request = youtube.videos().list(
@@ -344,7 +398,7 @@ def fetch_and_rank_videos_by_topic(topic: str, max_results: int = 10, top_n: int
         
     except Exception as e:
         logger.error(f"Error in fetch_and_rank_videos_by_topic: {e}")
-        return placeholder_results[:top_n]
+        return get_static_videos(topic, max_results=max_results)[:top_n]
 
 def get_video_summary(video_id, topic, model, util):
     """
