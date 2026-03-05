@@ -47,6 +47,38 @@ const Dashboard = () => {
         fetchData();
     }, []);
 
+    // Refresh completed topics when page becomes visible or focus returns
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                const updatedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+                setCompletedTopics(updatedTopics);
+            }
+        };
+
+        const handleFocus = () => {
+            const updatedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+            setCompletedTopics(updatedTopics);
+        };
+
+        const handleStorageChange = (e) => {
+            if (e.key === 'completedTopics') {
+                const updatedTopics = JSON.parse(e.newValue || '[]');
+                setCompletedTopics(updatedTopics);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('storage', handleStorageChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleFocus);
+            window.removeEventListener('storage', handleStorageChange);
+        };
+    }, []);
+
     // Dynamic stats
     const totalUploads = history.length;
     const evaluatedItems = history.length; // In this app, every upload is evaluated
