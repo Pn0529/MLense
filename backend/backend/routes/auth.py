@@ -35,7 +35,13 @@ def register(user: UserRegister):
         "phone": user.phone # Storing plain for this specific project flow
     })
 
-    return {"message": "User registered successfully"}
+    # Auto-login upon registration
+    access_token = create_access_token({"sub": user.email})
+    return {
+        "message": "User registered successfully",
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
 
 @router.post("/login")
