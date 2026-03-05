@@ -5,7 +5,7 @@ from backend.utils.database import users_collection
 
 SECRET_KEY = "exambridge-secret-key"  # change in production
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

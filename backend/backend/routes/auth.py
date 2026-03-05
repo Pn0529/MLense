@@ -19,6 +19,9 @@ class UserLogin(BaseModel):
 
 @router.post("/register")
 def register(user: UserRegister):
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="Database connection is not available. Please check MongoDB IP whitelisting.")
+    
     # Check if user already exists
     existing_user = users_collection.find_one({"email": user.email})
 
@@ -37,6 +40,9 @@ def register(user: UserRegister):
 
 @router.post("/login")
 def login(user: UserLogin):
+    if users_collection is None:
+        raise HTTPException(status_code=503, detail="Database connection is not available. Please check MongoDB IP whitelisting.")
+
     # Find user in database
     db_user = users_collection.find_one({"email": user.email})
 

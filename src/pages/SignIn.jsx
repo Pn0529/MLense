@@ -69,12 +69,7 @@ const SignIn = () => {
             navigate('/dashboard');
         } catch (err) {
             console.error('Auth request failed:', err);
-            // Offline fallback: store details locally without JWT
-            localStorage.setItem('userName', name);
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('userPhone', '+91' + phone);
-            localStorage.setItem('isLoggedIn', 'true');
-            navigate('/dashboard');
+            alert('Unable to connect to the authentication server. Please ensure the backend is running and you have whitelisted your IP in MongoDB Atlas.');
         }
     };
 

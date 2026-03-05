@@ -75,6 +75,7 @@ async def analyze(branch: str, file: UploadFile = File(...), token: str = Depend
     5. Saves analysis to MongoDB.
     """
     # 0. Authenticate User
+    logger.info(f"Analyzing with token: {token[:10]}...")
     user_email = get_current_user(token)
     if not user_email:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
