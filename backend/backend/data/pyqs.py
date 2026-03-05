@@ -311,11 +311,34 @@ GATE_PYQS = {
     ]
 }
 
-def get_pyqs_by_topic(topic_name: str):
-    """Find PYQs matching or partially matching a topic name."""
-    topic_lower = topic_name.lower()
-    results = []
+from backend.utils.database import pyqs_collection
 
+def get_pyqs_by_topic(topic_name: str):
+    """Find PYQs matching or partially matching a topic name from MongoDB with fallback."""
+    topic_lower = topic_name.lower()
+    
+    # Try fetching from MongoDB first
+    if pyqs_collection is not None:
+        try:
+            # Simple matching for now
+            results = list(pyqs_collection.find({}))
+            matched = []
+            for doc in results:
+                cat = doc.get("category", "")
+                if (cat.lower() in topic_lower or 
+                    topic_lower in cat.lower() or
+                    any(keyword in topic_lower for keyword in cat.lower().split())):
+                    matched.append({
+                        "category": cat,
+                        "questions": doc.get("questions", [])
+                    })
+            if matched:
+                return matched
+        except Exception as e:
+            print(f"Error fetching PYQs from DB: {e}")
+
+    # Fallback to local dictionary
+    results = []
     for category, questions in GATE_PYQS.items():
         if (category.lower() in topic_lower or
             topic_lower in category.lower() or
@@ -325,7 +348,7 @@ def get_pyqs_by_topic(topic_name: str):
                 "questions": questions
             })
 
-    # If no exact match, return all categories
+    # If no match in local either, return all local categories
     if not results:
         for category, questions in GATE_PYQS.items():
             results.append({
@@ -336,5 +359,13 @@ def get_pyqs_by_topic(topic_name: str):
     return results
 
 def get_all_categories():
-    """Return list of all PYQ categories."""
+    """Return list of all PYQ categories from MongoDB with fallback."""
+    if pyqs_collection is not None:
+        try:
+            categories = list(pyqs_collection.distinct("category"))
+            if categories:
+                return categories
+        except Exception as e:
+            print(f"Error fetching categories from DB: {e}")
+
     return list(GATE_PYQS.keys())
