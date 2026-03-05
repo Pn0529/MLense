@@ -69,6 +69,9 @@ const Resources = () => {
                     newValue: JSON.stringify(mainCompleted)
                 }));
             }
+            
+            // Send quiz score email
+            sendQuizScoreEmail();
         }
     };
 
@@ -97,6 +100,35 @@ const Resources = () => {
                 key: 'completedTopics',
                 newValue: JSON.stringify(completed)
             }));
+            
+            // Send quiz score email
+            sendQuizScoreEmail();
+        }
+    };
+
+    // Send quiz score email
+    const sendQuizScoreEmail = async () => {
+        try {
+            const token = localStorage.getItem('jwt_token');
+            const response = await fetch(`${API_BASE_URL}/send_quiz_score_email`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                console.log('Quiz score email sent successfully:', data);
+                // Show success message to user
+                alert(`📧 Progress report sent! Average score: ${data.average_score}%`);
+            } else {
+                console.error('Failed to send email:', data.msg);
+            }
+        } catch (error) {
+            console.error('Error sending quiz score email:', error);
         }
     };
 

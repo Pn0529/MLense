@@ -13,8 +13,9 @@ import time
 
 from backend.services.nlp_service import extract_text_from_pdf, extract_topics, compute_overall_similarity, topic_wise_similarity_ranking, get_model, get_util
 from backend.services.youtube_service import fetch_youtube_videos, get_video_summary
+from backend.services.email_service import send_quiz_score_email
 from backend.utils.auth_utils import get_current_user
-from backend.utils.database import analyses_collection
+from backend.utils.database import analyses_collection, quiz_results_collection
 from backend.data.pyqs import get_pyqs_by_topic, get_all_categories
 import uvicorn
 import logging
@@ -516,6 +517,57 @@ def get_quiz_history(token: str = Depends(oauth2_scheme)):
         logger.error(f"Failed to fetch quiz history: {e}")
         # Return empty list instead of error for better UX
         return []
+
+
+@app.post("/send_quiz_score_email")
+def send_quiz_score_email_endpoint(token: str = Depends(oauth2_scheme)):
+    """
+    Send quiz score summary email to the user.
+    Calculates average score from quiz history and sends email report.
+    """
+    user_email = get_current_user(token)
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    logger.info(f"Preparing quiz score email for user: {user_email}")
+    
+    # Get quiz history to calculate average score
+    try:
+        if quiz_results_collection is None:
+            logger.warning("Database unavailable, cannot fetch quiz history for email")
+            return {"msg": "Email service temporarily unavailable"}
+        
+        results = list(quiz_results_collection.find({"user_email": user_email}))
+        
+        if not results:
+            logger.info(f"No quiz results found for user {user_email}")
+            return {"msg": "No quiz results available"}
+        
+        # Calculate average score
+        total_score = sum(r.get("percentage", 0) for r in results)
+        average_score = total_score / len(results)
+        
+        # Get completed topics
+        completed_topics = list(set(r.get("topic", "") for r in results if r.get("topic")))
+        
+        # Send email
+        email_sent = send_quiz_score_email(user_email, average_score, completed_topics)
+        
+        if email_sent:
+            logger.info(f"Quiz score email sent successfully to {user_email}")
+            return {
+                "msg": "Quiz score email sent successfully",
+                "average_score": round(average_score, 1),
+                "total_quizzes": len(results),
+                "completed_topics": len(completed_topics)
+            }
+        else:
+            logger.error(f"Failed to send quiz score email to {user_email}")
+            return {"msg": "Failed to send email. Please check email configuration."}
+            
+    except Exception as e:
+        logger.error(f"Error sending quiz score email: {e}")
+        return {"msg": "Error sending email"}
 
 
 if __name__ == "__main__":
