@@ -157,11 +157,26 @@ const Resources = () => {
                         </div>
                     )}
 
-                    {/* No video available (API key not set) */}
+                    {/* Fallback: direct YouTube search link when no API video */}
                     {!tod["Best Video"] && (
-                        <div style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '8px', color: '#888', textAlign: 'center' }}>
-                            <i className="fa-brands fa-youtube" style={{ fontSize: '1.5rem', color: '#ccc', marginBottom: '0.5rem', display: 'block' }}></i>
-                            YouTube recommendation could not be fetched. Please check that YOUTUBE_API_KEY is configured.
+                        <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', borderRadius: '12px', padding: '1.5rem', color: '#fff', textAlign: 'center' }}>
+                            <i className="fa-brands fa-youtube" style={{ fontSize: '2.5rem', color: '#ff0000', marginBottom: '0.8rem', display: 'block' }}></i>
+                            <p style={{ color: '#ccc', marginBottom: '1rem', fontSize: '1rem' }}>
+                                Search for the best lectures on this topic directly on YouTube!
+                            </p>
+                            <a
+                                href={`https://www.youtube.com/results?search_query=${encodeURIComponent((tod["Topic Name"] || tod["Topic"]) + " GATE lecture")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                                    background: '#ff0000', color: '#fff', fontWeight: 700,
+                                    padding: '0.7rem 1.5rem', borderRadius: '8px',
+                                    textDecoration: 'none', fontSize: '1rem',
+                                    boxShadow: '0 4px 15px rgba(255,0,0,0.4)'
+                                }}>
+                                <i className="fa-brands fa-youtube"></i> Search on YouTube
+                            </a>
                         </div>
                     )}
                 </div>
