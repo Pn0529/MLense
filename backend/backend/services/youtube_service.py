@@ -652,62 +652,95 @@ def get_video_summary(video_id, topic, model, util, video_title=""):
 def generate_ai_summary(topic, video_title, model):
     """
     Generates an AI summary based on topic and video title when transcripts are unavailable.
-    Uses sentence transformers to generate relevant educational content.
+    Extracts meaningful content from the title to create relevant educational summaries.
     """
     logger.info(f"Generating AI summary for topic: {topic}, title: {video_title}")
     
-    # Create topic-based educational content templates
-    topic_keywords = topic.lower().split()
+    # Extract key concepts from video title
+    title_lower = video_title.lower()
+    topic_lower = topic.lower()
     
-    # Base educational content for common CS topics
-    educational_templates = {
-        "operating": [
-            "Operating systems manage computer hardware and software resources, providing common services for computer programs.",
-            "Key concepts include process management, memory management, file systems, and I/O operations.",
-            "Understanding OS fundamentals is crucial for system design and resource optimization in computing."
-        ],
-        "network": [
-            "Computer networks enable communication and resource sharing between connected devices using standardized protocols.",
-            "Core concepts include TCP/IP, routing, switching, network security, and data transmission methods.",
-            "Network architecture and design principles are essential for building scalable communication systems."
-        ],
-        "data structure": [
-            "Data structures organize and store data efficiently, enabling optimal access and modification operations.",
-            "Common structures include arrays, linked lists, stacks, queues, trees, graphs, and hash tables.",
-            "Choosing the right data structure impacts algorithm efficiency and overall program performance."
-        ],
-        "algorithm": [
-            "Algorithms are step-by-step procedures for solving problems and performing computations efficiently.",
-            "Key areas include sorting, searching, dynamic programming, graph algorithms, and complexity analysis.",
-            "Algorithm design and analysis form the foundation of efficient software development and optimization."
-        ],
-        "database": [
-            "Database systems provide structured storage, retrieval, and management of data for applications.",
-            "Core concepts include SQL, normalization, indexing, transactions, ACID properties, and query optimization.",
-            "Understanding database design is essential for building reliable and scalable data-driven applications."
-        ],
-        "machine learning": [
-            "Machine learning enables systems to learn patterns from data and make predictions without explicit programming.",
-            "Key concepts include supervised learning, unsupervised learning, neural networks, and model evaluation.",
-            "ML applications span computer vision, natural language processing, recommendation systems, and more."
-        ],
-        "default": [
-            f"This video covers essential concepts in {topic}, providing comprehensive coverage of theoretical foundations.",
-            f"Key learning objectives include understanding core principles, practical applications, and advanced techniques in {topic}.",
-            f"The content emphasizes problem-solving skills and real-world implementation strategies for {topic}."
+    # Parse title to extract key learning points
+    title_parts = video_title.replace("-", " ").replace(":", " ").replace("|", " ").split()
+    
+    # Create specific summary based on title content
+    if "tutorial" in title_lower or "course" in title_lower or "complete" in title_lower:
+        summary_points = [
+            f"This comprehensive tutorial provides in-depth coverage of {topic} concepts and practical applications.",
+            f"Key learning areas include fundamental principles, advanced techniques, and real-world implementation strategies.",
+            f"The content is structured to build strong foundational knowledge through progressive skill development."
         ]
+    elif "explained" in title_lower or "guide" in title_lower or "introduction" in title_lower:
+        summary_points = [
+            f"This educational guide explains core {topic} concepts in an accessible and structured manner.",
+            f"Topics covered include essential definitions, fundamental principles, and step-by-step explanations.",
+            f"The presentation emphasizes clarity and understanding for learners at all levels."
+        ]
+    elif "advanced" in title_lower or "deep dive" in title_lower or "master" in title_lower:
+        summary_points = [
+            f"This advanced content explores sophisticated {topic} concepts and complex implementation scenarios.",
+            f"Focus areas include optimization techniques, advanced algorithms, and professional best practices.",
+            f"Suitable for experienced learners seeking to deepen their expertise in {topic}."
+        ]
+    elif "crash course" in title_lower or "quick" in title_lower or "basics" in title_lower:
+        summary_points = [
+            f"This crash course delivers essential {topic} knowledge in a condensed, easy-to-digest format.",
+            f"Core concepts covered include fundamental principles, key terminology, and basic applications.",
+            f"Perfect for beginners seeking rapid understanding of {topic} essentials."
+        ]
+    elif "lecture" in title_lower or "university" in title_lower or "mit" in title_lower or "stanford" in title_lower:
+        summary_points = [
+            f"This academic lecture presents rigorous {topic} content following university-level curriculum standards.",
+            f"Theoretical foundations, mathematical models, and formal methodologies are thoroughly explained.",
+            f"Content aligns with computer science and engineering academic requirements."
+        ]
+    elif "project" in title_lower or "build" in title_lower or "create" in title_lower:
+        summary_points = [
+            f"This hands-on content demonstrates practical {topic} implementation through real-world projects.",
+            f"Learners gain experience with tools, frameworks, and development workflows specific to {topic}.",
+            f"Project-based approach reinforces theoretical knowledge with practical application."
+        ]
+    else:
+        # Generate from title keywords
+        key_concepts = [word for word in title_parts if len(word) > 3 and word.lower() not in ['video', 'watch', 'learn', 'this', 'with', 'from', 'your', '2023', '2024']]
+        
+        if key_concepts:
+            concept_str = ", ".join(key_concepts[:3])
+            summary_points = [
+                f"This educational video covers essential concepts in {topic} with focus on {concept_str}.",
+                f"The content explores theoretical foundations, practical applications, and industry best practices.",
+                f"Learners will develop practical skills and deeper understanding of {topic} fundamentals."
+            ]
+        else:
+            summary_points = [
+                f"This video provides comprehensive coverage of {topic} concepts and applications.",
+                f"Key learning objectives include understanding core principles and practical implementation strategies.",
+                f"The content emphasizes problem-solving skills and real-world applications in {topic}."
+            ]
+    
+    # Add topic-specific enhancements
+    topic_enhancements = {
+        "operating": "Includes process scheduling, memory management, file systems, and concurrency control.",
+        "network": "Covers OSI model, TCP/IP protocols, routing algorithms, and network security principles.",
+        "database": "Explores SQL queries, normalization, indexing strategies, and transaction management.",
+        "algorithm": "Discusses time/space complexity, sorting algorithms, graph traversal, and optimization techniques.",
+        "data structure": "Examines arrays, linked lists, trees, graphs, hash tables, and their operational complexities.",
+        "machine learning": "Covers supervised/unsupervised learning, neural networks, feature engineering, and model evaluation.",
+        "web": "Includes HTML/CSS, JavaScript, backend frameworks, APIs, and responsive design principles.",
+        "programming": "Focuses on coding fundamentals, syntax, debugging techniques, and software design patterns.",
+        "security": "Explores cryptography, authentication, threat modeling, and secure coding practices.",
+        "cloud": "Covers cloud architecture, AWS/Azure services, containerization, and deployment strategies."
     }
     
-    # Find matching template
-    selected_template = educational_templates["default"]
-    for keyword, template in educational_templates.items():
-        if keyword in topic.lower() or keyword in video_title.lower():
-            selected_template = template
+    # Add specific enhancement if topic matches
+    for keyword, enhancement in topic_enhancements.items():
+        if keyword in topic_lower or keyword in title_lower:
+            summary_points.append(enhancement)
             break
     
     # Format the AI-generated summary
-    summary = " • " + "\n • ".join(selected_template)
-    summary += "\n\n[AI-Generated Summary - Transcript Unavailable]"
+    summary = " • " + "\n • ".join(summary_points)
+    summary += "\n\n[AI-Generated Summary based on Video Title - Transcript Unavailable]"
     
-    logger.info(f"AI summary generated successfully for topic: {topic}")
+    logger.info(f"AI summary generated successfully for: {video_title}")
     return summary
