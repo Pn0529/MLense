@@ -411,15 +411,20 @@ const Resources = () => {
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                                         <div>
                                             <h4 style={{ margin: '0 0 0.3rem 0', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <i className="fa-solid fa-file-circle-question"></i>
-                                                Practice with Previous Year Questions
+                                                <i className="fa-solid fa-play-circle"></i>
+                                                Watch Top-Ranked Video
                                             </h4>
                                             <p style={{ margin: 0, fontSize: '0.9rem', color: '#e8daef' }}>
-                                                Test your knowledge with GATE exam questions
+                                                Jump straight to the highest TubeMatix-scored lecture
                                             </p>
                                         </div>
                                         <button
-                                            onClick={() => navigate('/pyqs', { state: { topic } })}
+                                            onClick={() => {
+                                                const topVideo = videos[0];
+                                                if (topVideo) {
+                                                    window.open(topVideo.url, '_blank', 'noopener,noreferrer');
+                                                }
+                                            }}
                                             style={{
                                                 background: '#fff',
                                                 color: '#9b59b6',
@@ -442,8 +447,8 @@ const Resources = () => {
                                                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
                                             }}
                                         >
-                                            <i className="fa-solid fa-play" style={{ marginRight: '6px' }}></i>
-                                            Start Quiz
+                                            <i className="fa-brands fa-youtube" style={{ marginRight: '6px' }}></i>
+                                            Watch Now
                                         </button>
                                     </div>
                                 </div>
