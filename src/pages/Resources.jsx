@@ -546,18 +546,42 @@ const Resources = () => {
                     <i className="fa-solid fa-info-circle" style={{ fontSize: '2.5rem', color: 'var(--primary-navy)', marginBottom: '1rem', display: 'block' }}></i>
                     <h3 style={{ color: 'var(--primary-navy)' }}>No Topics to Learn</h3>
                     <p style={{ color: '#7f8c8d', marginBottom: '1.5rem' }}>
-                        Great job! Your syllabus is well-aligned with the GATE curriculum.
+                        Great job! Your syllabus is well-aligned with the GATE curriculum. All topics have been mastered.
                     </p>
-                    <button
-                        onClick={() => navigate('/dashboard')}
-                        style={{
-                            background: 'var(--primary-navy)',
-                            color: '#fff',
-                            fontWeight: 700,
-                            padding: '0.8rem 1.5rem',
-                            borderRadius: '6px',
-                            border: 'none',
-                            cursor: 'pointer',
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            style={{
+                                background: 'var(--primary-navy)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                padding: '0.8rem 1.5rem',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '1rem'
+                            }}
+                        >
+                            Go to Dashboard
+                        </button>
+                        <button
+                            onClick={() => navigate('/upload')}
+                            style={{
+                                background: 'var(--primary-green)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                padding: '0.8rem 1.5rem',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontSize: '1rem'
+                            }}
+                        >
+                            Analyze New Syllabus
+                        </button>
+                    </div>
+                </div>
+            )}
                             fontSize: '0.95rem'
                         }}
                     >
