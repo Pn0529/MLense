@@ -110,6 +110,20 @@ const Upload = () => {
             localStorage.setItem('latestResults', JSON.stringify(data));
             localStorage.setItem('latestBranch', branch);
 
+            // Also save to analysis history for dashboard
+            const historyEntry = {
+                branch: branch,
+                overall_similarity: data.overall_similarity || 0,
+                critical_gaps: data.results ? data.results.filter(r => r.priority && r.priority.includes('High')).length : 0,
+                created_at: new Date().toISOString()
+            };
+            
+            const existingHistory = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+            existingHistory.unshift(historyEntry); // Add to beginning
+            // Keep only last 20 entries
+            const trimmedHistory = existingHistory.slice(0, 20);
+            localStorage.setItem('analysisHistory', JSON.stringify(trimmedHistory));
+
             // Pass the raw API response to the Results page via navigation state
             navigate('/results', { state: { results: data, branch } });
         } catch (err) {

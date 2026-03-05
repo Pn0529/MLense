@@ -9,41 +9,88 @@ const Dashboard = () => {
     const [userName, setUserName] = useState(localStorage.getItem('userName') || 'User');
     const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail') || 'test@example.com');
     const [userPhone, setUserPhone] = useState(localStorage.getItem('userPhone') || '+917893140112');
-    const [completedTopics, setCompletedTopics] = useState(JSON.parse(localStorage.getItem('completedTopics') || '[]'));
-    const [history, setHistory] = useState([]);
-    const [quizHistory, setQuizHistory] = useState([]);
+    const [completedTopics, setCompletedTopics] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('completedTopics') || '[]');
+        } catch {
+            return [];
+        }
+    });
+    const [history, setHistory] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+        } catch {
+            return [];
+        }
+    });
+    const [quizHistory, setQuizHistory] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('quizHistory') || '[]');
+        } catch {
+            return [];
+        }
+    });
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             const token = localStorage.getItem('jwt_token');
+            
+            // First, immediately load from localStorage for instant display
+            const localHistory = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+            const localQuizHistory = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+            const localCompletedTopics = JSON.parse(localStorage.getItem('completedTopics') || '[]');
+            
+            console.log('Loading from localStorage:', { localHistory, localQuizHistory, localCompletedTopics });
+            
+            setHistory(localHistory);
+            setQuizHistory(localQuizHistory);
+            setCompletedTopics(localCompletedTopics);
+            
             if (!token) {
                 setIsLoading(false);
                 return;
             }
 
+            // Then try to fetch from API and merge
             try {
-                // Fetch analysis history
                 const histRes = await fetch(`${API_BASE_URL}/history`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (histRes.ok) {
-                    setHistory(await histRes.json());
+                    const apiHistory = await histRes.json();
+                    if (apiHistory && apiHistory.length > 0) {
+                        // Merge API data with localStorage
+                        const combined = [...apiHistory, ...localHistory];
+                        const unique = combined.filter((item, index, self) => 
+                            index === self.findIndex((t) => t.created_at === item.created_at)
+                        );
+                        setHistory(unique);
+                        localStorage.setItem('analysisHistory', JSON.stringify(unique));
+                    }
                 }
 
-                // Fetch quiz history
                 const quizRes = await fetch(`${API_BASE_URL}/quiz_history`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (quizRes.ok) {
-                    setQuizHistory(await quizRes.json());
+                    const apiQuizData = await quizRes.json();
+                    if (apiQuizData && apiQuizData.length > 0) {
+                        const combined = [...apiQuizData, ...localQuizHistory];
+                        const unique = combined.filter((item, index, self) => 
+                            index === self.findIndex((t) => t.created_at === item.created_at)
+                        );
+                        setQuizHistory(unique);
+                        localStorage.setItem('quizHistory', JSON.stringify(unique));
+                    }
                 }
             } catch (err) {
-                console.error("Failed to fetch dashboard data:", err);
+                console.error("API fetch failed, using localStorage only:", err);
             } finally {
                 setIsLoading(false);
             }
         };
+        
         fetchData();
 
         // Refresh data when page becomes visible or focus returns
@@ -87,6 +134,11 @@ const Dashboard = () => {
     const avgQuizScore = quizHistory.length > 0
         ? Math.round(quizHistory.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / quizHistory.length)
         : 0;
+
+    // Get unique quiz topics
+    const quizTopics = quizHistory.length > 0
+        ? [...new Set(quizHistory.map(q => q.topic).filter(Boolean))]
+        : [];
 
     const pendingReviews = history.reduce((acc, curr) => acc + (curr.critical_gaps || 0), 0);
 
@@ -281,6 +333,25 @@ const Dashboard = () => {
                             ))
                         ) : (
                             <li className="activity-item" style={{ color: '#666', fontStyle: 'italic' }}>No topics completed yet. Go to Resources to mark them done.</li>
+                        )}
+                    </ul>
+                </div>
+
+                <div className="dashboard-panel">
+                    <h3>Quiz Topics ({quizTopics.length})</h3>
+                    <ul className="activity-list" id="quiz-topics-list">
+                        {quizTopics.length > 0 ? (
+                            quizTopics.map((topic, index) => (
+                                <li key={index} className="activity-item">
+                                    <div style={{ color: '#9b59b6', fontSize: '1.2rem', marginTop: '4px' }}><i className="fa-solid fa-question-circle"></i></div>
+                                    <div className="activity-text">
+                                        <p><strong>Quiz:</strong> {topic}</p>
+                                        <small>{quizHistory.filter(q => q.topic === topic).length} attempt(s)</small>
+                                    </div>
+                                </li>
+                            ))
+                        ) : (
+                            <li className="activity-item" style={{ color: '#666', fontStyle: 'italic' }}>No quizzes taken yet. Go to PYQs to practice!</li>
                         )}
                     </ul>
                 </div>

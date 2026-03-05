@@ -72,11 +72,28 @@ const PYQs = () => {
         if (currentQ + 1 >= questions.length) {
             setQuizComplete(true);
 
-            // Send results to backend
+            // Send results to backend and also save to localStorage
             const token = localStorage.getItem('jwt_token');
             if (token) {
                 const finalScore = score + (selectedAnswer === questions[currentQ].answer ? 1 : 0);
                 const percentage = Math.round((finalScore / questions.length) * 100);
+                
+                // Save to localStorage for dashboard display
+                const quizResult = {
+                    topic: selectedCategory,
+                    score: finalScore,
+                    total: questions.length,
+                    percentage: percentage,
+                    created_at: new Date().toISOString()
+                };
+                
+                const existingQuizHistory = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+                existingQuizHistory.unshift(quizResult);
+                // Keep only last 50 quiz results
+                const trimmedHistory = existingQuizHistory.slice(0, 50);
+                localStorage.setItem('quizHistory', JSON.stringify(trimmedHistory));
+                console.log("Quiz result saved to localStorage:", quizResult);
+                
                 try {
                     const response = await fetch(`${API_BASE_URL}/quiz_results`, {
                         method: 'POST',
@@ -95,9 +112,9 @@ const PYQs = () => {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     const data = await response.json();
-                    console.log("Quiz result saved successfully:", data);
+                    console.log("Quiz result saved to API:", data);
                 } catch (err) {
-                    console.error("Failed to save quiz results:", err);
+                    console.error("Failed to save quiz results to API:", err);
                 }
             }
         } else {
