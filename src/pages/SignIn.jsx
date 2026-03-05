@@ -38,11 +38,16 @@ const SignIn = () => {
         }
 
         // Prepare payload
-        const payload = {
-            name,
-            email,
-            phone: '+91' + phone,
-        };
+        const payload = mode === 'register'
+            ? {
+                name,
+                email,
+                phone: '+91' + phone,
+            }
+            : {
+                email,
+                phone: '+91' + phone,
+            };
 
         try {
             const response = await fetch(`${API_BASE_URL}/auth/${mode}`, {

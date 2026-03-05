@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connection Test</title>
+</head>
+<body>
+    <h1>Testing Frontend to Backend Connection</h1>
+    <button onclick="testHealth()">Test Health</button>
+    <button onclick="testAuth()">Test Auth</button>
+    <div id="result"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing health endpoint...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.text();
+                resultDiv.innerHTML = `Health Status: ${response.status}<br>Response: ${data}`;
+            } catch (err) {
+                resultDiv.innerHTML = `Health Error: ${err.message}`;
+            }
+        }
+
+        async function testAuth() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing auth endpoint...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'test@example.com',
+                        phone: '+919876543210'
+                    }),
+                });
+
+                const data = await response.json();
+                resultDiv.innerHTML = `Auth Status: ${response.status}<br>Response: ${JSON.stringify(data, null, 2)}`;
+            } catch (err) {
+                resultDiv.innerHTML = `Auth Error: ${err.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

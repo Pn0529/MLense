@@ -45,6 +45,7 @@ origins = [
     "http://localhost:5173", # Vite dev server
     "http://localhost:5174", # Vite dev server (alternative)
     "http://localhost:5175", # Vite dev server (current)
+    "http://localhost:5176", # Vite dev server (latest)
     "http://127.0.0.1:5500",
     "*" # Allowed for debugging, narrow down in production
 ]

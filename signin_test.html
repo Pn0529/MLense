@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test - Exact Copy of SignIn</title>
+</head>
+<body>
+    <h1>Testing Exact SignIn Logic</h1>
+    <button onclick="toggleMode()">Switch to Login</button>
+    <form id="authForm">
+        <input type="text" id="name" placeholder="Name" value="Test User"><br>
+        <input type="email" id="email" placeholder="Email" value="test4@example.com"><br>
+        <input type="text" id="phone" placeholder="Phone (10 digits)" value="9876543213"><br>
+        <button type="submit" id="submitBtn">Register</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let mode = 'register'; // Start with register
+
+        function toggleMode() {
+            mode = mode === 'login' ? 'register' : 'login';
+            document.getElementById('submitBtn').textContent = mode === 'login' ? 'Login' : 'Register';
+            document.getElementById('name').style.display = mode === 'register' ? 'block' : 'none';
+        }
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+
+            // Exact validation from SignIn.jsx
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            const phonePattern = /^[6-9]\d{9}$/;
+
+            if (!emailPattern.test(email)) {
+                alert('Please enter a valid Email address.');
+                return;
+            }
+            if (!phonePattern.test(phone)) {
+                alert('Please enter a valid 10-digit Indian mobile number.');
+                return;
+            }
+
+            // Prepare payload - FIXED version
+            const payload = mode === 'register'
+                ? {
+                    name,
+                    email,
+                    phone: '+91' + phone,
+                }
+                : {
+                    email,
+                    phone: '+91' + phone,
+                };
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `Sending ${mode} request...`;
+
+            try {
+                // Exact fetch call from SignIn.jsx
+                const response = await fetch(`${API_BASE_URL}/auth/${mode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    resultDiv.innerHTML = `Error: ${err.detail || response.statusText}`;
+                    return;
+                }
+
+                const data = await response.json();
+                resultDiv.innerHTML = `Success! Token: ${data.access_token ? data.access_token.substring(0, 20) + '...' : 'No token'}`;
+            } catch (err) {
+                resultDiv.innerHTML = `Network Error: ${err.message}`;
+                console.error('Auth request failed:', err);
+            }
+        });
+    </script>
+</body>
+</html>
