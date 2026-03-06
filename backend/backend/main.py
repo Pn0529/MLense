@@ -519,11 +519,17 @@ def get_quiz_history(token: str = Depends(oauth2_scheme)):
         return []
 
 
+from pydantic import BaseModel
+from typing import List, Optional
+
+class QuizScoreEmailRequest(BaseModel):
+    quiz_history: Optional[List[dict]] = None
+
 @app.post("/send_quiz_score_email")
-def send_quiz_score_email_endpoint(token: str = Depends(oauth2_scheme)):
+def send_quiz_score_email_endpoint(request: QuizScoreEmailRequest, token: str = Depends(oauth2_scheme)):
     """
     Send quiz score summary email to the user.
-    Calculates average score from quiz history and sends email report.
+    Calculates average score from quiz history (from database or frontend localStorage).
     """
     user_email = get_current_user(token)
     if not user_email:
@@ -531,13 +537,21 @@ def send_quiz_score_email_endpoint(token: str = Depends(oauth2_scheme)):
     
     logger.info(f"Preparing quiz score email for user: {user_email}")
     
-    # Get quiz history to calculate average score
+    # Get quiz history - first try database, then fallback to frontend data
+    results = []
+    
     try:
-        if quiz_results_collection is None:
-            logger.warning("Database unavailable, cannot fetch quiz history for email")
-            return {"msg": "Email service temporarily unavailable"}
+        # Try to get from database first
+        if quiz_results_collection is not None:
+            db_results = list(quiz_results_collection.find({"user_email": user_email}))
+            if db_results:
+                results = db_results
+                logger.info(f"Found {len(results)} quiz results in database")
         
-        results = list(quiz_results_collection.find({"user_email": user_email}))
+        # If no database results, use frontend-provided data
+        if not results and request.quiz_history:
+            results = request.quiz_history
+            logger.info(f"Using {len(results)} quiz results from frontend")
         
         if not results:
             logger.info(f"No quiz results found for user {user_email}")

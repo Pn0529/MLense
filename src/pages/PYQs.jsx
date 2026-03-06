@@ -184,8 +184,8 @@ const PYQs = () => {
                 )}
 
                 <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-                    <button className="btn" onClick={() => navigate('/resources')} style={{ background: 'var(--primary-navy)' }}>
-                        <i className="fa-solid fa-arrow-left" style={{ marginRight: '8px' }}></i> Back to Resources
+                    <button className="btn" onClick={() => navigate(-1)} style={{ background: 'var(--primary-navy)' }}>
+                        <i className="fa-solid fa-arrow-left" style={{ marginRight: '8px' }}></i> Back
                     </button>
                 </div>
             </main>
@@ -270,8 +270,8 @@ const PYQs = () => {
                         <button className="btn" onClick={() => navigate('/dashboard')} style={{ background: '#f39c12' }}>
                             <i className="fa-solid fa-chart-line" style={{ marginRight: '8px' }}></i> Dashboard
                         </button>
-                        <button className="btn" onClick={() => navigate('/resources')} style={{ background: '#555' }}>
-                            <i className="fa-solid fa-arrow-left" style={{ marginRight: '8px' }}></i> Resources
+                        <button className="btn" onClick={() => navigate(-1)} style={{ background: '#555' }}>
+                            <i className="fa-solid fa-arrow-left" style={{ marginRight: '8px' }}></i> Back
                         </button>
                     </div>
                 </div>

@@ -110,25 +110,34 @@ const Resources = () => {
     const sendQuizScoreEmail = async () => {
         try {
             const token = localStorage.getItem('jwt_token');
+            
+            // Get quiz history from localStorage
+            const quizHistory = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+            
             const response = await fetch(`${API_BASE_URL}/send_quiz_score_email`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({
+                    quiz_history: quizHistory
+                })
             });
             
             const data = await response.json();
             
-            if (response.ok) {
+            if (response.ok && data.average_score !== undefined) {
                 console.log('Quiz score email sent successfully:', data);
                 // Show success message to user
                 alert(`📧 Progress report sent! Average score: ${data.average_score}%`);
             } else {
                 console.error('Failed to send email:', data.msg);
+                alert(`⚠️ ${data.msg || 'Failed to send email'}`);
             }
         } catch (error) {
             console.error('Error sending quiz score email:', error);
+            alert('⚠️ Error sending email. Please try again.');
         }
     };
 
