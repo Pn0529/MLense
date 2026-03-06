@@ -175,7 +175,10 @@ const Dashboard = () => {
 
     const handleDeleteAccount = () => {
         if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-            localStorage.clear();
+            // Only remove auth-related items, preserve user data
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('user');
             navigate('/signin');
         }
     };

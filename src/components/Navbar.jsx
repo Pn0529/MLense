@@ -25,7 +25,10 @@ const Navbar = () => {
 
     const handleLogout = (e) => {
         e.preventDefault();
-        localStorage.clear();
+        // Only remove auth-related items, preserve user data (quizHistory, completedTopics, etc.)
+        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('user');
         setIsLoggedIn(false);
         navigate('/signin');
     };
