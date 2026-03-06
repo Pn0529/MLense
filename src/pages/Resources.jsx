@@ -285,16 +285,20 @@ const Resources = () => {
                                     <span><i className="fa-solid fa-eye" style={{ marginRight: '4px' }}></i>{tod["Best Video"]["Views"]} views</span>
                                     <span><i className="fa-solid fa-thumbs-up" style={{ marginRight: '4px' }}></i>{tod["Best Video"]["Likes"]} likes</span>
                                 </div>
-                                <a href={tod["Best Video"]["Link"]} target="_blank" rel="noopener noreferrer"
+                                <button
+                                    onClick={() => window.open(tod["Best Video"]["Link"], '_blank', 'noopener,noreferrer')}
                                     style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '8px',
                                         background: '#ff0000', color: '#fff', fontWeight: 700,
                                         padding: '0.7rem 1.5rem', borderRadius: '8px',
-                                        textDecoration: 'none', fontSize: '1rem',
+                                        border: 'none', cursor: 'pointer', fontSize: '1rem',
                                         boxShadow: '0 4px 15px rgba(255,0,0,0.4)', transition: 'transform 0.2s'
-                                    }}>
+                                    }}
+                                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                >
                                     <i className="fa-brands fa-youtube"></i> Watch on YouTube
-                                </a>
+                                </button>
                                 <a href={`/pyqs/${encodeURIComponent(tod["Topic Name"] || tod["Topic"])}`}
                                     style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -604,10 +608,8 @@ const Resources = () => {
 
                                                     {/* CTA Buttons */}
                                                     <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                                                        <a
-                                                            href={video.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
+                                                        <button
+                                                            onClick={() => window.open(video.url, '_blank', 'noopener,noreferrer')}
                                                             style={{
                                                                 flex: 1,
                                                                 display: 'inline-flex',
@@ -619,7 +621,8 @@ const Resources = () => {
                                                                 fontWeight: 700,
                                                                 padding: '0.6rem 0.8rem',
                                                                 borderRadius: '6px',
-                                                                textDecoration: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
                                                                 fontSize: '0.9rem',
                                                                 boxShadow: '0 4px 12px rgba(231, 76, 60, 0.3)',
                                                                 transition: 'all 0.2s'
@@ -634,7 +637,7 @@ const Resources = () => {
                                                             }}
                                                         >
                                                             <i className="fa-brands fa-youtube"></i> Watch
-                                                        </a>
+                                                        </button>
                                                         <button
                                                             onClick={() => {
                                                                 const summaryContent = video.summary || `Summary not available for this video.\n\nVideo: ${video.title}\nChannel: ${video.channel}`;
