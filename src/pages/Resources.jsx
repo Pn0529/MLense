@@ -273,8 +273,8 @@ const Resources = () => {
                                 </a>
                                 <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.9rem', color: '#aaa', marginBottom: '1rem', flexWrap: 'wrap' }}>
                                     <span><i className="fa-solid fa-circle-play" style={{ color: '#ff0000', marginRight: '4px' }}></i>{tod["Best Video"]["Channel"]}</span>
-                                    <span><i className="fa-solid fa-eye" style={{ marginRight: '4px' }}></i>👁 {tod["Best Video"]["Views"]} views</span>
-                                    <span><i className="fa-solid fa-thumbs-up" style={{ marginRight: '4px' }}></i>👍 {tod["Best Video"]["Likes"]} likes</span>
+                                    <span><i className="fa-solid fa-eye" style={{ marginRight: '4px' }}></i>{tod["Best Video"]["Views"]} views</span>
+                                    <span><i className="fa-solid fa-thumbs-up" style={{ marginRight: '4px' }}></i>{tod["Best Video"]["Likes"]} likes</span>
                                 </div>
                                 <a href={tod["Best Video"]["Link"]} target="_blank" rel="noopener noreferrer"
                                     style={{
