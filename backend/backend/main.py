@@ -14,6 +14,7 @@ import time
 from backend.services.nlp_service import extract_text_from_pdf, extract_topics, compute_overall_similarity, topic_wise_similarity_ranking, get_model, get_util
 from backend.services.youtube_service import fetch_youtube_videos, get_video_summary
 from backend.services.email_service import send_quiz_score_email
+from backend.services.gemini_service import generate_topic_summary, is_gemini_available
 from backend.utils.auth_utils import get_current_user
 from backend.utils.database import analyses_collection, quiz_results_collection
 from backend.data.pyqs import get_pyqs_by_topic, get_all_categories
@@ -582,6 +583,53 @@ def send_quiz_score_email_endpoint(request: QuizScoreEmailRequest, token: str = 
     except Exception as e:
         logger.error(f"Error sending quiz score email: {e}")
         return {"msg": "Error sending email"}
+
+
+@app.get("/topic-summary/{topic}")
+async def get_topic_summary(topic: str, token: str = Depends(oauth2_scheme)):
+    """
+    Generate an AI summary for a specific topic using Gemini.
+    Falls back to template summary if Gemini is unavailable.
+    """
+    user_email = get_current_user(token)
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    logger.info(f"Generating topic summary for: {topic}")
+    
+    try:
+        # Check if Gemini is available
+        gemini_available = is_gemini_available()
+        logger.info(f"Gemini available: {gemini_available}")
+        
+        # Generate summary
+        summary = generate_topic_summary(topic, max_words=300)
+        
+        if summary:
+            logger.info(f"Summary generated successfully for topic: {topic}")
+            return {
+                "topic": topic,
+                "summary": summary,
+                "source": "gemini" if gemini_available else "template",
+                "generated_at": datetime.utcnow().isoformat()
+            }
+        else:
+            logger.warning(f"Failed to generate summary for topic: {topic}")
+            return {
+                "topic": topic,
+                "summary": f"Summary not available for {topic}. Please try again later.",
+                "source": "error",
+                "generated_at": datetime.utcnow().isoformat()
+            }
+            
+    except Exception as e:
+        logger.error(f"Error generating topic summary: {e}")
+        return {
+            "topic": topic,
+            "summary": f"Error generating summary: {str(e)}",
+            "source": "error",
+            "generated_at": datetime.utcnow().isoformat()
+        }
 
 
 if __name__ == "__main__":
