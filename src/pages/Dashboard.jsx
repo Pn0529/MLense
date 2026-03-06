@@ -75,6 +75,7 @@ const Dashboard = () => {
                 });
                 if (quizRes.ok) {
                     const apiQuizData = await quizRes.json();
+                    // Only merge if API returns data; otherwise keep localStorage data
                     if (apiQuizData && apiQuizData.length > 0) {
                         const combined = [...apiQuizData, ...localQuizHistory];
                         const unique = combined.filter((item, index, self) => 
@@ -83,6 +84,7 @@ const Dashboard = () => {
                         setQuizHistory(unique);
                         localStorage.setItem('quizHistory', JSON.stringify(unique));
                     }
+                    // If API returns empty, localStorage data remains unchanged
                 }
             } catch (err) {
                 console.error("API fetch failed, using localStorage only:", err);
@@ -152,9 +154,19 @@ const Dashboard = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (quizRes.ok) {
-                const data = await quizRes.json();
-                setQuizHistory(data);
-                console.log('Quiz history refreshed:', data);
+                const apiData = await quizRes.json();
+                // Merge with localStorage instead of overwriting
+                const localQuizHistory = JSON.parse(localStorage.getItem('quizHistory') || '[]');
+                if (apiData && apiData.length > 0) {
+                    const combined = [...apiData, ...localQuizHistory];
+                    const unique = combined.filter((item, index, self) => 
+                        index === self.findIndex((t) => t.created_at === item.created_at)
+                    );
+                    setQuizHistory(unique);
+                    localStorage.setItem('quizHistory', JSON.stringify(unique));
+                    console.log('Quiz history refreshed and merged:', unique);
+                }
+                // If API returns empty, keep localStorage data unchanged
             }
         } catch (err) {
             console.error("Failed to refresh quiz history:", err);
